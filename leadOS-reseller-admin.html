@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LeadOS — Reseller Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800;900&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#02040a;--surface:#080c14;--surface2:#0d1320;--surface3:#121b2c;--border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.1);--accent:#00e5ff;--a2:#7fff6e;--a3:#ff6b35;--a4:#ffd166;--a5:#c084fc;--text:#e8f4ff;--muted:#3d5470}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 60% 40% at 50% 0%,rgba(0,229,255,0.05) 0%,transparent 60%);pointer-events:none;z-index:0}
+
+nav{position:sticky;top:0;z-index:100;background:rgba(2,4,10,.95);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);height:60px;display:flex;align-items:center;padding:0 32px;gap:16px}
+.nav-logo{font-family:'Syne',sans-serif;font-size:18px;font-weight:900;display:flex;align-items:center;gap:8px}
+.nav-logo-mark{width:28px;height:28px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center;color:#000;font-size:14px;font-weight:900}
+.nav-logo span{color:var(--accent)}
+.nav-badge{background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.2);color:var(--accent);font-size:9px;padding:2px 8px;border-radius:4px;letter-spacing:1px;text-transform:uppercase}
+.nav-right{margin-left:auto;display:flex;gap:10px;align-items:center}
+
+.btn{padding:8px 16px;border-radius:8px;font-family:'DM Mono',monospace;font-size:11px;font-weight:600;cursor:pointer;border:none;transition:all .2s;letter-spacing:.5px}
+.btn-primary{background:var(--accent);color:#000}
+.btn-primary:hover{background:#00cfe8;transform:translateY(-1px);box-shadow:0 4px 20px rgba(0,229,255,.3)}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.btn-ghost:hover{color:var(--text);border-color:var(--border2)}
+.btn-green{background:rgba(127,255,110,0.15);color:var(--a2);border:1px solid rgba(127,255,110,0.25)}
+.btn-green:hover{background:rgba(127,255,110,0.25)}
+.btn-orange{background:rgba(255,107,53,0.15);color:var(--a3);border:1px solid rgba(255,107,53,0.25)}
+.btn-sm{padding:5px 12px;font-size:10px}
+.btn-danger{background:rgba(255,107,53,0.12);color:var(--a3);border:1px solid rgba(255,107,53,0.2)}
+.btn-danger:hover{background:rgba(255,107,53,0.22)}
+
+.page{max-width:1200px;margin:0 auto;padding:32px;position:relative;z-index:1}
+
+/* Stats row */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;position:relative;overflow:hidden;transition:all .2s}
+.stat-card:hover{border-color:var(--border2);transform:translateY(-2px)}
+.stat-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px}
+.stat-card.c0::after{background:linear-gradient(90deg,transparent,var(--accent),transparent)}
+.stat-card.c1::after{background:linear-gradient(90deg,transparent,var(--a2),transparent)}
+.stat-card.c2::after{background:linear-gradient(90deg,transparent,var(--a4),transparent)}
+.stat-card.c3::after{background:linear-gradient(90deg,transparent,var(--a5),transparent)}
+.stat-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px}
+.stat-val{font-family:'Syne',sans-serif;font-size:30px;font-weight:900;line-height:1;margin-bottom:4px}
+.stat-delta{font-size:10px;color:var(--a2)}
+
+/* Two-col layout */
+.two-col{display:grid;grid-template-columns:1fr 360px;gap:20px}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:20px}
+.panel-header{padding:16px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.panel-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px}
+
+/* Reseller table */
+.reseller-row{display:grid;grid-template-columns:40px 1fr 100px 100px 90px 80px 120px;gap:10px;padding:13px 22px;align-items:center;border-bottom:1px solid rgba(255,255,255,0.03);font-size:11px;cursor:pointer;transition:background .15s}
+.reseller-row:hover{background:rgba(255,255,255,0.02)}
+.reseller-row.selected{background:rgba(0,229,255,0.04);border-left:3px solid var(--accent)}
+.reseller-row.header{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;border-bottom:1px solid var(--border);cursor:default;padding:10px 22px}
+.reseller-row.header:hover{background:transparent}
+.r-logo{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:14px;font-weight:900}
+.r-name{font-weight:600}
+.r-domain{font-size:10px;color:var(--muted);margin-top:1px}
+.tier-badge{font-size:9px;padding:3px 8px;border-radius:4px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;text-align:center}
+.tier-basic{background:rgba(61,84,112,0.3);color:var(--muted)}
+.tier-pro{background:rgba(0,229,255,0.1);color:var(--accent)}
+.tier-enterprise{background:rgba(192,132,252,0.12);color:var(--a5)}
+.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px}
+.dot-active{background:var(--a2)}
+.dot-trial{background:var(--a4)}
+.dot-paused{background:var(--muted)}
+
+/* Config panel */
+.config-panel{position:sticky;top:80px}
+.config-section{padding:18px 22px;border-bottom:1px solid var(--border)}
+.config-label{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px}
+.config-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-family:'DM Mono',monospace;font-size:11px;color:var(--text);outline:none;transition:border-color .2s;margin-bottom:8px}
+.config-input:focus{border-color:rgba(0,229,255,.4)}
+.config-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.03);font-size:11px}
+.config-row-label{color:var(--muted)}
+
+/* Color swatches */
+.color-row{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.swatch-wrap{display:flex;flex-direction:column;align-items:center;gap:3px}
+.swatch{width:32px;height:32px;border-radius:7px;border:2px solid rgba(255,255,255,0.1);cursor:pointer;transition:all .15s;position:relative}
+.swatch:hover{transform:scale(1.15);border-color:rgba(255,255,255,0.3)}
+.swatch input[type=color]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.swatch-lbl{font-size:7px;color:var(--muted);text-transform:uppercase}
+
+/* Toggle */
+.toggle-wrap{display:flex;align-items:center;justify-content:space-between;padding:7px 0;font-size:10px;color:var(--text)}
+.toggle{width:36px;height:20px;border-radius:10px;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
+.toggle.on{background:var(--accent)}
+.toggle.off{background:var(--surface3);border:1px solid var(--border2)}
+.toggle::after{content:'';position:absolute;top:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:left .2s}
+.toggle.on::after{left:18px}
+.toggle.off::after{left:2px}
+
+/* Preview mini */
+.preview-mini{border-radius:10px;overflow:hidden;border:1px solid var(--border);margin-top:12px}
+.preview-nav{height:32px;display:flex;align-items:center;padding:0 12px;gap:6px;font-size:10px;font-family:'Syne',sans-serif;font-weight:700}
+.preview-content{padding:10px 12px;display:flex;flex-direction:column;gap:5px}
+.preview-item{height:8px;border-radius:3px;background:rgba(255,255,255,0.06)}
+
+/* Generated config box */
+.code-box{background:var(--surface3);border:1px solid var(--border2);border-radius:8px;padding:14px;font-family:'DM Mono',monospace;font-size:9px;color:var(--a2);line-height:1.7;max-height:200px;overflow-y:auto;white-space:pre-wrap;word-break:break-all}
+
+/* Toast */
+.toast-container{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+
+/* Tab row */
+.tab-row{display:flex;gap:0;border-bottom:1px solid var(--border);padding:0 22px}
+.tab{padding:12px 18px;font-size:11px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;margin-bottom:-1px}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+.tab-content{display:none;padding:18px 22px}
+.tab-content.active{display:block}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.reseller-row{animation:fadeUp .3s ease both}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">
+    <div class="nav-logo-mark">L</div>
+    Lead<span>OS</span>
+  </div>
+  <div class="nav-badge">Reseller Admin</div>
+  <div class="nav-right">
+    <span style="font-size:10px;color:var(--muted)">You: <strong style="color:var(--text)">LeadOS HQ</strong></span>
+    <button class="btn btn-green btn-sm" onclick="newReseller()">+ New Reseller</button>
+    <button class="btn btn-primary btn-sm" onclick="generateConfig()">⬇️ Export Config</button>
+  </div>
+</nav>
+
+<div class="page">
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-card c0">
+      <div class="stat-lbl">Active Resellers</div>
+      <div class="stat-val" style="color:var(--accent)">7</div>
+      <div class="stat-delta">↑ 2 this month</div>
+    </div>
+    <div class="stat-card c1">
+      <div class="stat-lbl">Total End Users</div>
+      <div class="stat-val" style="color:var(--a2)">312</div>
+      <div class="stat-delta">↑ 48 this month</div>
+    </div>
+    <div class="stat-card c2">
+      <div class="stat-lbl">Monthly Revenue</div>
+      <div class="stat-val" style="color:var(--a4)">$4,850</div>
+      <div class="stat-delta">↑ $800 vs last month</div>
+    </div>
+    <div class="stat-card c3">
+      <div class="stat-lbl">Avg Rev / Reseller</div>
+      <div class="stat-val" style="color:var(--a5)">$693</div>
+      <div class="stat-delta">↑ Growing</div>
+    </div>
+  </div>
+
+  <div class="two-col">
+
+    <!-- Left: Reseller list + tabs -->
+    <div>
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">🏢 Reseller Accounts</div>
+          <div style="display:flex;gap:8px">
+            <input style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-family:'DM Mono',monospace;font-size:10px;color:var(--text);outline:none;width:160px" placeholder="Search resellers..."/>
+            <button class="btn btn-ghost btn-sm">Filter</button>
+          </div>
+        </div>
+
+        <div class="reseller-row header">
+          <div></div><div>Reseller</div><div>Tier</div><div>Users</div><div>MRR</div><div>Status</div><div>Actions</div>
+        </div>
+        <div id="resellerList"></div>
+      </div>
+
+      <!-- Detail tabs for selected reseller -->
+      <div class="panel" id="detailPanel">
+        <div class="panel-header">
+          <div class="panel-title" id="detailTitle">🏢 AgentIQ — Insurance Lead Platform</div>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-ghost btn-sm">📋 Clone</button>
+            <button class="btn btn-green btn-sm" onclick="showToast('Config deployed to reseller!','✅')">🚀 Deploy</button>
+          </div>
+        </div>
+        <div class="tab-row">
+          <div class="tab active" onclick="switchTab(this,'branding')">Branding</div>
+          <div class="tab" onclick="switchTab(this,'features')">Features</div>
+          <div class="tab" onclick="switchTab(this,'pricing')">Pricing</div>
+          <div class="tab" onclick="switchTab(this,'usage')">Usage</div>
+        </div>
+
+        <!-- Branding tab -->
+        <div class="tab-content active" id="tab-branding">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <div>
+              <div class="config-label">Brand Name</div>
+              <input class="config-input" id="cfgName" value="AgentIQ" oninput="updatePreview()"/>
+              <div class="config-label">Tagline</div>
+              <input class="config-input" id="cfgTagline" value="Insurance Lead Intelligence" oninput="updatePreview()"/>
+              <div class="config-label">Logo Letter</div>
+              <input class="config-input" id="cfgLogo" value="A" maxlength="2" style="width:60px" oninput="updatePreview()"/>
+              <div class="config-label" style="margin-top:8px">Custom Domain</div>
+              <input class="config-input" id="cfgDomain" value="app.agentiq.ai"/>
+              <div class="config-label">Support Email</div>
+              <input class="config-input" id="cfgSupport" value="support@agentiq.ai"/>
+            </div>
+            <div>
+              <div class="config-label">Color Palette</div>
+              <div class="color-row" id="colorSwatches"></div>
+              <div class="config-label" style="margin-top:4px">Live Preview</div>
+              <div class="preview-mini" id="previewMini"></div>
+              <div class="config-label" style="margin-top:12px">Attribution</div>
+              <div class="toggle-wrap">
+                <span>Show "Powered by LeadOS"</span>
+                <div class="toggle off" id="poweredByToggle" onclick="this.classList.toggle('on');this.classList.toggle('off');updatePreview()"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Features tab -->
+        <div class="tab-content" id="tab-features">
+          <div class="config-label">Visible Features</div>
+          <div id="featureToggles"></div>
+          <div style="margin-top:16px">
+            <div class="config-label">Navigation Label Overrides</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="navOverrides"></div>
+          </div>
+        </div>
+
+        <!-- Pricing tab -->
+        <div class="tab-content" id="tab-pricing">
+          <div class="config-label">Reseller Pricing Model</div>
+          <div class="config-row"><span class="config-row-label">Your cost (LeadOS charges you)</span><span style="color:var(--accent);font-family:'Syne',sans-serif;font-size:14px;font-weight:800">$149/mo</span></div>
+          <div class="config-row"><span class="config-row-label">You charge this reseller</span>
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="color:var(--muted)">$</span>
+              <input class="config-input" value="399" style="width:70px;margin:0;text-align:right;font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:var(--a2)"/>
+              <span style="color:var(--muted)">/mo</span>
+            </div>
+          </div>
+          <div class="config-row"><span class="config-row-label">Your margin</span><span style="color:var(--a4);font-family:'Syne',sans-serif;font-size:14px;font-weight:800">$250/mo · 63%</span></div>
+          <div class="config-row"><span class="config-row-label">Max end users allowed</span>
+            <input class="config-input" value="50" style="width:60px;margin:0;text-align:right"/>
+          </div>
+          <div class="config-row"><span class="config-row-label">Leads/month included</span>
+            <input class="config-input" value="10,000" style="width:90px;margin:0;text-align:right"/>
+          </div>
+          <div class="config-row"><span class="config-row-label">Tier</span>
+            <select style="background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:'DM Mono',monospace;font-size:10px;padding:5px 8px;border-radius:6px;outline:none">
+              <option>pro</option><option>basic</option><option>enterprise</option>
+            </select>
+          </div>
+          <div style="margin-top:20px;padding:14px;background:rgba(127,255,110,0.05);border:1px solid rgba(127,255,110,0.15);border-radius:8px;font-size:10px;color:var(--a2)">
+            💡 At 7 resellers averaging $399/mo, that's <strong style="color:var(--text)">$2,793/mo gross</strong> with <strong style="color:var(--a2)">$1,750/mo net margin</strong> after your LeadOS costs — before you have a single direct subscriber.
+          </div>
+        </div>
+
+        <!-- Usage tab -->
+        <div class="tab-content" id="tab-usage">
+          <div class="config-label">This Month — AgentIQ</div>
+          <div class="config-row"><span class="config-row-label">Active users</span><span>47 / 50</span></div>
+          <div class="config-row"><span class="config-row-label">Leads discovered</span><span style="color:var(--accent)">8,291</span></div>
+          <div class="config-row"><span class="config-row-label">AI scoring calls</span><span>8,291</span></div>
+          <div class="config-row"><span class="config-row-label">Emails sent</span><span>3,847</span></div>
+          <div class="config-row"><span class="config-row-label">CRM syncs</span><span>1,204</span></div>
+          <div class="config-row"><span class="config-row-label">Avg open rate</span><span style="color:var(--a2)">44%</span></div>
+          <div class="config-row"><span class="config-row-label">API cost this month</span><span style="color:var(--a4)">$38.20</span></div>
+          <div class="config-row"><span class="config-row-label">Overage charges</span><span style="color:var(--muted)">None</span></div>
+          <div style="margin-top:14px">
+            <button class="btn btn-ghost btn-sm">📊 Full Usage Report</button>
+            <button class="btn btn-ghost btn-sm" style="margin-left:6px">📧 Email to Reseller</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Config generator -->
+    <div class="config-panel">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">⚙️ Generated Config</div>
+          <button class="btn btn-ghost btn-sm" onclick="copyConfig()">📋 Copy</button>
+        </div>
+        <div style="padding:16px">
+          <div class="config-label">This is the whitelabel-config.js for this reseller</div>
+          <div class="code-box" id="configOutput"></div>
+          <div style="margin-top:10px;font-size:9px;color:var(--muted);line-height:1.6">
+            Reseller adds one script tag to their deployment:<br>
+            <span style="color:var(--accent)">&lt;script src="whitelabel-config.js"&gt;&lt;/script&gt;</span><br>
+            Every screen instantly reflects their branding.
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">📦 Deployment Package</div>
+        </div>
+        <div style="padding:16px;display:flex;flex-direction:column;gap:8px">
+          <button class="btn btn-primary" style="width:100%;padding:11px" onclick="showToast('Deployment package downloaded!','📦')">⬇️ Download Reseller Package</button>
+          <button class="btn btn-ghost" style="width:100%;padding:10px" onclick="showToast('Setup link sent to reseller!','📧')">📧 Email Setup Link</button>
+          <button class="btn btn-ghost" style="width:100%;padding:10px" onclick="showToast('DNS instructions sent!','🌐')">🌐 Send DNS Instructions</button>
+          <button class="btn btn-danger" style="width:100%;padding:10px;margin-top:4px" onclick="showToast('Account suspended','⚠️')">⏸ Suspend Account</button>
+        </div>
+      </div>
+
+      <!-- Reseller tiers -->
+      <div class="panel">
+        <div class="panel-header"><div class="panel-title">💰 Your Pricing Tiers</div></div>
+        <div style="padding:16px;display:flex;flex-direction:column;gap:8px">
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px">
+            <div style="font-family:'Syne',sans-serif;font-size:12px;font-weight:700;margin-bottom:4px">Basic <span style="color:var(--muted);font-size:10px;font-family:'DM Mono',monospace">$99/mo</span></div>
+            <div style="font-size:9px;color:var(--muted);line-height:1.6">Logo + colors · "Powered by LeadOS" shown · 5 users · 1,000 leads/mo</div>
+          </div>
+          <div style="background:var(--surface2);border:1px solid rgba(0,229,255,0.2);border-radius:8px;padding:12px">
+            <div style="font-family:'Syne',sans-serif;font-size:12px;font-weight:700;margin-bottom:4px;color:var(--accent)">Pro <span style="color:var(--muted);font-size:10px;font-family:'DM Mono',monospace">$299–499/mo</span></div>
+            <div style="font-size:9px;color:var(--muted);line-height:1.6">Full branding · Attribution hidden · Custom domain · 50 users · 10k leads/mo</div>
+          </div>
+          <div style="background:var(--surface2);border:1px solid rgba(192,132,252,0.2);border-radius:8px;padding:12px">
+            <div style="font-family:'Syne',sans-serif;font-size:12px;font-weight:700;margin-bottom:4px;color:var(--a5)">Enterprise <span style="color:var(--muted);font-size:10px;font-family:'DM Mono',monospace">Custom</span></div>
+            <div style="font-size:9px;color:var(--muted);line-height:1.6">Everything + custom features · Unlimited users · Dedicated support · SLA</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+const resellers = [
+  {id:1, name:'AgentIQ', domain:'app.agentiq.ai', letter:'A', color:'#c8a84b', bg:'rgba(200,168,75,0.15)', industry:'P&C Insurance', users:47, mrr:399, tier:'pro', status:'active'},
+  {id:2, name:'HomeLeads', domain:'app.homeleads.io', letter:'H', color:'#e040fb', bg:'rgba(224,64,251,0.15)', industry:'Real Estate', users:31, mrr:299, tier:'pro', status:'active'},
+  {id:3, name:'DealerIQ', domain:'leads.dealeriq.com', letter:'D', color:'#00e5ff', bg:'rgba(0,229,255,0.15)', industry:'Auto Dealers', users:88, mrr:499, tier:'enterprise', status:'active'},
+  {id:4, name:'MortgageOS', domain:'beta.mortgageos.ai', letter:'M', color:'#7fff6e', bg:'rgba(127,255,110,0.15)', industry:'Mortgage', users:24, mrr:299, tier:'pro', status:'trial'},
+  {id:5, name:'PropFlow', domain:'—', letter:'P', color:'#ff6b35', bg:'rgba(255,107,53,0.15)', industry:'Property Mgmt', users:12, mrr:99, tier:'basic', status:'trial'},
+  {id:6, name:'RecruitAI', domain:'—', letter:'R', color:'#ffd166', bg:'rgba(255,209,102,0.15)', industry:'Recruiting', users:8, mrr:99, tier:'basic', status:'active'},
+  {id:7, name:'LendOS', domain:'—', letter:'L', color:'#c084fc', bg:'rgba(192,132,252,0.15)', industry:'Lending', users:5, mrr:99, tier:'basic', status:'paused'},
+];
+
+let selectedReseller = resellers[0];
+
+// Render reseller list
+function renderResellers() {
+  const list = document.getElementById('resellerList');
+  list.innerHTML = '';
+  const tierCls = {basic:'tier-basic', pro:'tier-pro', enterprise:'tier-enterprise'};
+  const statusCls = {active:'dot-active', trial:'dot-trial', paused:'dot-paused'};
+  resellers.forEach((r,i) => {
+    const row = document.createElement('div');
+    row.className = 'reseller-row' + (r.id===selectedReseller.id?' selected':'');
+    row.style.animationDelay = i*0.05+'s';
+    row.onclick = () => selectReseller(r, row);
+    row.innerHTML = `
+      <div class="r-logo" style="background:${r.bg};color:${r.color}">${r.letter}</div>
+      <div>
+        <div class="r-name">${r.name}</div>
+        <div class="r-domain">${r.domain}</div>
+      </div>
+      <div><span class="tier-badge ${tierCls[r.tier]}">${r.tier}</span></div>
+      <div style="color:var(--text)">${r.users} <span style="color:var(--muted);font-size:9px">users</span></div>
+      <div style="color:var(--a2);font-family:'Syne',sans-serif;font-weight:700">$${r.mrr}</div>
+      <div><span class="status-dot ${statusCls[r.status]}"></span><span style="font-size:10px;color:var(--muted)">${r.status}</span></div>
+      <div style="display:flex;gap:4px">
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();showToast('Editing ${r.name}','✏️')">Edit</button>
+        <button class="btn btn-green btn-sm" onclick="event.stopPropagation();showToast('Config deployed to ${r.name}!','🚀')">Deploy</button>
+      </div>
+    `;
+    list.appendChild(row);
+  });
+}
+
+function selectReseller(r, row) {
+  selectedReseller = r;
+  document.querySelectorAll('.reseller-row').forEach(el=>el.classList.remove('selected'));
+  row.classList.add('selected');
+  document.getElementById('detailTitle').textContent = `🏢 ${r.name} — ${r.industry}`;
+  document.getElementById('cfgName').value = r.name;
+  document.getElementById('cfgTagline').value = `${r.industry} Lead Intelligence`;
+  document.getElementById('cfgLogo').value = r.letter;
+  document.getElementById('cfgDomain').value = r.domain !== '—' ? r.domain : `app.${r.name.toLowerCase()}.com`;
+  document.getElementById('cfgSupport').value = `support@${r.name.toLowerCase()}.com`;
+  updatePreview();
+  generateConfig();
+}
+
+// Color swatches
+const colorFields = [
+  {key:'accent', label:'Accent', default:'#00e5ff'},
+  {key:'a2', label:'Success', default:'#7fff6e'},
+  {key:'bg', label:'BG', default:'#02040a'},
+  {key:'surface', label:'Panel', default:'#080c14'},
+  {key:'a3', label:'Alert', default:'#ff6b35'},
+  {key:'a4', label:'Warn', default:'#ffd166'},
+];
+
+const swatchContainer = document.getElementById('colorSwatches');
+colorFields.forEach(f => {
+  const wrap = document.createElement('div');
+  wrap.className = 'swatch-wrap';
+  wrap.innerHTML = `
+    <div class="swatch" style="background:${f.default}">
+      <input type="color" id="color_${f.key}" value="${f.default}" oninput="this.parentElement.style.background=this.value;updatePreview();generateConfig()"/>
+    </div>
+    <div class="swatch-lbl">${f.label}</div>
+  `;
+  swatchContainer.appendChild(wrap);
+});
+
+// Feature toggles
+const features = [
+  {key:'leadDiscovery', label:'Lead Discovery'},
+  {key:'aiAgents', label:'AI Agents'},
+  {key:'outreach', label:'Outreach'},
+  {key:'crmIntegrations', label:'CRM Integrations'},
+  {key:'icpBuilder', label:'ICP Builder'},
+  {key:'analytics', label:'Analytics'},
+  {key:'linkedinIntel', label:'LinkedIn Intel'},
+];
+const ftContainer = document.getElementById('featureToggles');
+features.forEach(f => {
+  const row = document.createElement('div');
+  row.className = 'toggle-wrap';
+  row.innerHTML = `
+    <span>${f.label}</span>
+    <div class="toggle on" id="feat_${f.key}" onclick="this.classList.toggle('on');this.classList.toggle('off');generateConfig()"></div>
+  `;
+  ftContainer.appendChild(row);
+});
+
+// Nav label overrides
+const navItems = ['Command Center','Lead Discovery','Outreach','ICP Builder','Analytics','Integrations'];
+const navContainer = document.getElementById('navOverrides');
+navItems.forEach(item => {
+  navContainer.innerHTML += `
+    <div>
+      <div style="font-size:8px;color:var(--muted);margin-bottom:3px">${item}</div>
+      <input class="config-input" style="margin-bottom:0" value="${item}" placeholder="${item}" oninput="generateConfig()"/>
+    </div>
+  `;
+});
+
+// Live preview
+function updatePreview() {
+  const name = document.getElementById('cfgName')?.value || 'LeadOS';
+  const letter = document.getElementById('cfgLogo')?.value || 'L';
+  const accent = document.getElementById('color_accent')?.value || '#00e5ff';
+  const bg = document.getElementById('color_bg')?.value || '#02040a';
+  const surface = document.getElementById('color_surface')?.value || '#080c14';
+
+  const preview = document.getElementById('previewMini');
+  preview.innerHTML = `
+    <div class="preview-nav" style="background:${surface};border-bottom:1px solid rgba(255,255,255,0.06)">
+      <div style="width:18px;height:18px;background:${accent};border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#000;font-weight:900">${letter}</div>
+      <span style="color:${accent}">${name}</span>
+    </div>
+    <div class="preview-content" style="background:${bg}">
+      <div class="preview-item" style="width:80%;background:rgba(255,255,255,0.04)"></div>
+      <div class="preview-item" style="width:60%;background:${accent}22"></div>
+      <div style="display:flex;gap:4px;margin-top:2px">
+        <div style="height:24px;flex:1;border-radius:4px;background:${surface};border:1px solid rgba(255,255,255,0.05)"></div>
+        <div style="height:24px;width:60px;border-radius:4px;background:${accent};"></div>
+      </div>
+    </div>
+  `;
+  generateConfig();
+}
+
+// Config generator
+function generateConfig() {
+  const name = document.getElementById('cfgName')?.value || 'LeadOS';
+  const tagline = document.getElementById('cfgTagline')?.value || 'Lead Intelligence OS';
+  const letter = document.getElementById('cfgLogo')?.value || 'L';
+  const domain = document.getElementById('cfgDomain')?.value || '';
+  const support = document.getElementById('cfgSupport')?.value || '';
+  const poweredBy = document.getElementById('poweredByToggle')?.classList.contains('on');
+  const accent = document.getElementById('color_accent')?.value || '#00e5ff';
+  const a2 = document.getElementById('color_a2')?.value || '#7fff6e';
+  const bg = document.getElementById('color_bg')?.value || '#02040a';
+  const surface = document.getElementById('color_surface')?.value || '#080c14';
+  const a3 = document.getElementById('color_a3')?.value || '#ff6b35';
+  const a4 = document.getElementById('color_a4')?.value || '#ffd166';
+
+  const config = `const WhiteLabelConfig = {
+  enabled: true,
+  tier: 'pro',
+  brand: {
+    name: '${name}',
+    tagline: '${tagline}',
+    logoText: '${letter}',
+    logoMark: null,
+    version: 'v1.0',
+  },
+  colors: {
+    bg:      '${bg}',
+    surface: '${surface}',
+    surface2:'${surface}dd',
+    accent:  '${accent}',
+    a2:      '${a2}',
+    a3:      '${a3}',
+    a4:      '${a4}',
+    text:    '#f0f4ff',
+    muted:   '#6b7a99',
+  },
+  poweredBy: {
+    show: ${poweredBy},
+    text: 'Powered by LeadOS',
+    link: 'https://leadOS.ai',
+  },
+  support: {
+    email: '${support}',
+    docsUrl: 'https://${domain}/docs',
+  },
+};`;
+
+  const box = document.getElementById('configOutput');
+  if (box) box.textContent = config;
+}
+
+function copyConfig() {
+  const box = document.getElementById('configOutput');
+  navigator.clipboard.writeText(box.textContent);
+  showToast('Config copied to clipboard!', '📋');
+}
+
+function generateConfig2() { generateConfig(); }
+
+function switchTab(el, tabId) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-'+tabId)?.classList.add('active');
+}
+
+function newReseller() {
+  showToast('New reseller form would open here', '🏢');
+}
+
+function showToast(msg, icon) {
+  const container = document.getElementById('toastContainer');
+  const item = document.createElement('div');
+  item.style.cssText = 'background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.2);border-radius:10px;padding:12px 18px;display:flex;align-items:center;gap:10px;font-size:11px;color:#f0f4ff;transform:translateX(120%);transition:transform .3s ease;box-shadow:0 8px 32px rgba(0,0,0,.5);backdrop-filter:blur(12px);font-family:"DM Mono",monospace;';
+  item.innerHTML = `<span style="font-size:16px">${icon}</span>${msg}`;
+  container.appendChild(item);
+  requestAnimationFrame(() => { item.style.transform = 'translateX(0)'; });
+  setTimeout(() => { item.style.transform = 'translateX(120%)'; setTimeout(() => item.remove(), 300); }, 3000);
+}
+
+// Init
+renderResellers();
+updatePreview();
+generateConfig();
+</script>
+</body>
+</html>
