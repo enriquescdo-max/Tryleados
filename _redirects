@@ -1,0 +1,11 @@
+# Netlify redirects — clean URLs
+/login          /leadOS-login.html            200
+/dashboard      /leadOS-dashboard.html        200
+/discover       /leadOS-lead-discovery.html   200
+/outreach       /leadOS-outreach.html         200
+/crm            /leadOS-crm-integrations.html 200
+/icp            /leadOS-icp-builder.html      200
+/analytics      /leadOS-analytics.html        200
+/admin          /leadOS-reseller-admin.html   200
+/signup         /leadOS-reseller-signup.html  200
+/content        /leadOS-contentOS.html        200
