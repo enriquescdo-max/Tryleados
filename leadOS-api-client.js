@@ -19,8 +19,8 @@
  */
 
 const LeadOSConfig = {
-  API_BASE_URL: 'http://localhost:8000',   // ← change this when you deploy
-  MOCK_MODE: true,                          // ← flip to false to go live
+  API_BASE_URL: 'https://tryleados-production.up.railway.app',
+  MOCK_MODE: false,
   MOCK_DELAY_MS: 400,                       // realistic loading feel in mock mode
   REQUEST_TIMEOUT_MS: 10000,
 };
