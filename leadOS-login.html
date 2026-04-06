@@ -11,7 +11,7 @@
 body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
 .bg-glow{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse 70% 50% at 50% 0%,rgba(0,255,136,0.07) 0%,transparent 60%)}
 .bg-grid{position:fixed;inset:0;pointer-events:none;background-image:linear-gradient(rgba(0,255,136,0.022) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,136,0.022) 1px,transparent 1px);background-size:44px 44px}
-.card{background:var(--surface);border:1px solid var(--border2);border-radius:22px;padding:38px 36px 30px;width:100%;max-width:430px;position:relative;z-index:1;box-shadow:0 40px 100px rgba(0,0,0,.55),0 0 0 1px rgba(0,255,136,0.04)}
+.card{background:var(--surface);border:1px solid var(--border2);border-radius:22px;padding:38px 36px 30px;width:100%;max-width:430px;position:relative;z-index:1;box-shadow:0 40px 100px rgba(0,0,0,.55)}
 .logo{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:28px}
 .logo-mark{width:40px;height:40px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:20px;font-weight:900;color:#000;flex-shrink:0}
 .logo-name{font-family:'Syne',sans-serif;font-size:24px;font-weight:900}
@@ -23,25 +23,29 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
 .msg.error{background:rgba(255,51,102,0.09);border:1px solid rgba(255,51,102,.22);color:#ff8099}
 .msg.success{background:rgba(0,255,136,0.07);border:1px solid rgba(0,255,136,.2);color:var(--accent)}
 .msg.info{background:rgba(0,102,255,0.07);border:1px solid rgba(0,102,255,.2);color:#88aaff}
-.setup-warn{background:rgba(255,170,0,0.06);border:1px solid rgba(255,170,0,.18);border-radius:10px;padding:13px 15px;font-size:10px;color:rgba(255,210,100,.85);line-height:1.7;margin-bottom:16px;display:none}
-.setup-warn.show{display:block}
-.setup-warn code{background:rgba(255,170,0,.12);border-radius:3px;padding:1px 5px;font-family:'DM Mono',monospace;font-size:9px}
+
+/* ── OAuth buttons ── */
 .oauth-stack{display:flex;flex-direction:column;gap:10px;margin-bottom:20px}
-.oauth-btn{width:100%;padding:12px 16px;border-radius:10px;border:1px solid var(--border2);background:var(--surface2);font-family:'DM Mono',monospace;font-size:12px;font-weight:500;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:12px;color:var(--text);position:relative;overflow:hidden;text-align:left}
-.oauth-btn:hover{background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.22);transform:translateY(-1px)}
+.oauth-btn{width:100%;padding:13px 16px;border-radius:10px;border:1px solid var(--border2);background:var(--surface2);font-family:'DM Mono',monospace;font-size:12px;font-weight:500;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:12px;color:var(--text);position:relative;overflow:hidden}
+.oauth-btn:hover{background:rgba(255,255,255,0.05);border-color:rgba(255,255,255,0.2);transform:translateY(-1px)}
 .oauth-btn:active{transform:translateY(0)}
 .oauth-btn svg{flex-shrink:0}
-.oauth-btn .lbl{flex:1}
+.oauth-btn .lbl{flex:1;text-align:left}
 .oauth-btn .arr{font-size:10px;color:var(--muted);transition:transform .2s}
 .oauth-btn:hover .arr{transform:translateX(3px)}
 .oauth-btn.loading{opacity:.6;pointer-events:none}
+.oauth-btn.loading .arr{display:none}
 .oauth-btn.loading::after{content:'';position:absolute;right:14px;top:50%;margin-top:-7px;width:14px;height:14px;border:2px solid rgba(255,255,255,.15);border-top-color:rgba(255,255,255,.7);border-radius:50%;animation:spin .6s linear infinite}
 .btn-google{border-color:rgba(66,133,244,.25)}
-.btn-google:hover{border-color:rgba(66,133,244,.5);background:rgba(66,133,244,.06)}
+.btn-google:hover{border-color:rgba(66,133,244,.5);background:rgba(66,133,244,.07)}
 .btn-msft{border-color:rgba(0,120,215,.25)}
-.btn-msft:hover{border-color:rgba(0,120,215,.5);background:rgba(0,120,215,.06)}
+.btn-msft:hover{border-color:rgba(0,120,215,.5);background:rgba(0,120,215,.07)}
+
+/* ── Divider ── */
 .divider{display:flex;align-items:center;gap:12px;margin:18px 0;font-size:10px;color:var(--muted)}
 .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* ── Form ── */
 .field{margin-bottom:14px}
 .field label{display:block;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:2px;margin-bottom:6px}
 .field input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:11px 14px;font-family:'DM Mono',monospace;font-size:13px;color:var(--text);outline:none;transition:border-color .2s}
@@ -52,10 +56,16 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
 .forgot a:hover{color:var(--accent)}
 .btn-signin{width:100%;padding:13px;border-radius:10px;border:none;background:var(--accent);color:#000;font-family:'DM Mono',monospace;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.5px}
 .btn-signin:hover{background:#00e87a;transform:translateY(-1px);box-shadow:0 6px 24px rgba(0,255,136,.3)}
-.btn-signin:active{transform:translateY(0)}
 .btn-signin:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
 .btn-demo{width:100%;padding:11px;border-radius:10px;background:rgba(0,102,255,0.08);color:#7799ff;border:1px solid rgba(0,102,255,.2);font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;transition:all .2s;margin-top:10px}
-.btn-demo:hover{background:rgba(0,102,255,.15);border-color:rgba(0,102,255,.38)}
+.btn-demo:hover{background:rgba(0,102,255,.15)}
+
+/* ── Setup notice (shown until Supabase URL is configured) ── */
+.setup-notice{background:rgba(255,170,0,.06);border:1px solid rgba(255,170,0,.2);border-radius:10px;padding:13px 15px;font-size:10px;color:rgba(255,210,100,.9);line-height:1.8;margin-bottom:16px;display:none}
+.setup-notice.show{display:block}
+.setup-notice code{background:rgba(255,170,0,.12);border-radius:3px;padding:1px 5px;font-size:9px}
+
+/* ── Trust strip ── */
 .trust-strip{display:flex;justify-content:center;gap:16px;margin-top:20px;flex-wrap:wrap}
 .trust-item{display:flex;align-items:center;gap:5px;font-size:9px;color:var(--muted)}
 .trust-item::before{content:'✓';color:var(--accent);font-weight:700}
@@ -74,7 +84,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
 
 <div class="card">
   <div class="logo">
-    <div class="logo-mark" id="loginLogoMark">L</div>
+    <div class="logo-mark">L</div>
     <div class="logo-name">Lead<span>OS</span></div>
   </div>
 
@@ -85,20 +95,20 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
   <div class="msg success" id="msgSuccess"></div>
   <div class="msg info"    id="msgInfo"></div>
 
-  <!-- OAuth setup notice (shown in live mode when credentials missing) -->
-  <div class="setup-warn" id="setupWarn">
-    <strong>⚙️ OAuth credentials not yet configured.</strong><br>
-    To enable Google/Microsoft sign-in, add these to your backend <code>.env</code>:<br>
-    <code>GOOGLE_CLIENT_ID</code> &nbsp;·&nbsp; <code>MICROSOFT_CLIENT_ID</code><br>
-    See <strong>OAUTH_SETUP.md</strong> in the backend zip for step-by-step instructions.
+  <!-- Shown until Supabase is configured -->
+  <div class="setup-notice" id="setupNotice">
+    <strong>⚙️ One more step:</strong> Add your Supabase URL and anon key to this file.<br>
+    Find the two lines near the top of the script that say:<br>
+    <code>SUPABASE_URL</code> and <code>SUPABASE_ANON_KEY</code><br>
+    Replace the placeholder values with your real keys from the Supabase dashboard.
   </div>
 
-  <!-- The 3 OAuth buttons -->
+  <!-- Google & Microsoft buttons -->
   <div class="oauth-stack">
 
-    <button class="oauth-btn btn-google" id="btnGoogle" onclick="oauthLogin('google')">
+    <button class="oauth-btn btn-google" id="btnGoogle" onclick="signInWithProvider('google')">
       <svg width="18" height="18" viewBox="0 0 48 48">
-        <path fill="#4285F4" d="M46.145 24.503c0-1.613-.131-3.163-.375-4.652H24v8.804h12.434c-.537 2.892-2.162 5.343-4.609 6.988v5.808h7.461c4.363-4.020 6.859-9.94 6.859-16.948z"/>
+        <path fill="#4285F4" d="M46.145 24.503c0-1.613-.131-3.163-.375-4.652H24v8.804h12.434c-.537 2.892-2.162 5.343-4.609 6.988v5.808h7.461c4.363-4.02 6.859-9.94 6.859-16.948z"/>
         <path fill="#34A853" d="M24 47c6.237 0 11.466-2.068 15.287-5.599l-7.461-5.808c-2.068 1.388-4.713 2.203-7.826 2.203-6.018 0-11.115-4.065-12.935-9.533H3.346v5.996C7.148 41.852 15.012 47 24 47z"/>
         <path fill="#FBBC05" d="M11.065 28.263A14.29 14.29 0 0 1 10.29 24c0-1.489.254-2.929.775-4.263v-5.996H3.346A23.94 23.94 0 0 0 0 24c0 3.867.926 7.525 2.557 10.779l8.508-6.516z" opacity=".9"/>
         <path fill="#EA4335" d="M24 9.748c3.393 0 6.437 1.167 8.829 3.458l6.619-6.619C35.454 2.938 30.227.5 24 .5 15.012.5 7.148 5.648 3.346 13.741l8.508 6.516C13.6 14.779 18.703 9.748 24 9.748z"/>
@@ -107,7 +117,7 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
       <span class="arr">→</span>
     </button>
 
-    <button class="oauth-btn btn-msft" id="btnMicrosoft" onclick="oauthLogin('microsoft')">
+    <button class="oauth-btn btn-msft" id="btnMicrosoft" onclick="signInWithProvider('azure')">
       <svg width="18" height="18" viewBox="0 0 21 21">
         <rect x="0"  y="0"  width="10" height="10" fill="#F25022"/>
         <rect x="11" y="0"  width="10" height="10" fill="#7FBA00"/>
@@ -117,7 +127,8 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
       <span class="lbl">Continue with Microsoft</span>
       <span class="arr">→</span>
     </button>
-</div>
+
+  </div>
 
   <div class="divider">or sign in with email</div>
 
@@ -128,11 +139,11 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
   <div class="field">
     <label>Password</label>
     <input type="password" id="pwInput" placeholder="••••••••" autocomplete="current-password"
-           onkeydown="if(event.key==='Enter')handleLogin()"/>
+           onkeydown="if(event.key==='Enter')handleEmailLogin()"/>
   </div>
   <div class="forgot"><a href="#" onclick="handleForgot();return false">Forgot password?</a></div>
 
-  <button class="btn-signin" id="signinBtn" onclick="handleLogin()">Sign In →</button>
+  <button class="btn-signin" id="signinBtn" onclick="handleEmailLogin()">Sign In →</button>
   <button class="btn-demo" onclick="demoLogin()">⚡ Demo Login — try without an account</button>
 
   <div class="trust-strip">
@@ -141,177 +152,195 @@ body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-
     <div class="trust-item">Month-to-month</div>
     <div class="trust-item">Your data stays yours</div>
   </div>
-
   <div class="toggle-mode">
-    No account yet? <a href="leadOS-reseller-signup.html">Get started free →</a>
+    No account? <a href="leadOS-reseller-signup.html">Get started free →</a>
   </div>
 </div>
 
 <div class="footer">
-  <a href="leadOS-landing-page.html">← Homepage</a> &nbsp;·&nbsp;
-  <a href="/cdn-cgi/l/email-protection#22515752524d5056624e4743466d710c434b">Support</a> &nbsp;·&nbsp;
-  <a href="#" onclick="showSetupDocs();return false">OAuth Setup Guide</a>
+  <a href="leadOS-landing-page.html">← Homepage</a>
+  &nbsp;·&nbsp;
+  <a href="/cdn-cgi/l/email-protection#50232520203f2224102422293c3531343f237e333f3d">Support</a>
 </div>
 
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="leadOS-theme-engine.js"></script>
-<script src="leadOS-whitelabel-config.js"></script>
-<script src="leadOS-api-client.js"></script>
+<!-- Supabase JS client (loaded from CDN — no install needed) -->
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-// ── OAuth provider config ─────────────────────────────────────────────────
-// clientId values are injected by the backend at serve time.
-// In MOCK_MODE they're empty — the mock flow runs client-side.
-const OAUTH = {
-  google: {
-    clientId: window.__GOOGLE_CLIENT_ID__ || '',
-    authUrl:  'https://accounts.google.com/o/oauth2/v2/auth',
-    scope:    'openid email profile',
-    redirect: window.location.origin + window.location.pathname.replace('leadOS-login.html','') + 'auth/google/callback',
-  },
-  microsoft: {
-    clientId: window.__MICROSOFT_CLIENT_ID__ || '',
-    authUrl:  'https://login.microsoftonline.com/common/oauth2/v2.0/authorize',
-    scope:    'openid email profile User.Read',
-    redirect: window.location.origin + window.location.pathname.replace('leadOS-login.html','') + 'auth/microsoft/callback',
-  },
-};
-const LABELS = { google:'Google', microsoft:'Microsoft' };
 
-// ── Utilities ─────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════
+// ✏️  STEP 1 — Paste your Supabase credentials here
+//    Get these from: supabase.com → your project → Settings → API
+// ═══════════════════════════════════════════════════════════════════
+const SUPABASE_URL      = 'https://vvsshirbxfypjvrdmgls.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2c3NoaXJieGZ5cGp2cmRtZ2xzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NTIwODQsImV4cCI6MjA4OTMyODA4NH0.XtNj4zIamNNUbo3Hhpu4dayzhT9XvwMZY1PhP9vLybY';
+
+// ═══════════════════════════════════════════════════════════════════
+// ✏️  STEP 2 — Set your site URL (where users land after login)
+// ═══════════════════════════════════════════════════════════════════
+const SITE_URL = 'https://tryleados.com';
+
+// ─────────────────────────────────────────────────────────────────
+// Everything below is automatic — no need to edit
+// ─────────────────────────────────────────────────────────────────
+
+const isConfigured = SUPABASE_URL !== 'YOUR_SUPABASE_URL';
+
+// Initialize Supabase client (only if configured)
+const supabase = isConfigured
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
+
+// Show setup notice if not yet configured
+if (!isConfigured) {
+  document.getElementById('setupNotice').classList.add('show');
+}
+
+// ── Helpers ─────────────────────────────────────────────────────
 function showMsg(type, text) {
-  ['Error','Success','Info'].forEach(t => document.getElementById('msg'+t).classList.remove('show'));
-  const el = document.getElementById('msg' + type.charAt(0).toUpperCase() + type.slice(1));
+  ['Error','Success','Info'].forEach(t =>
+    document.getElementById('msg'+t).classList.remove('show'));
+  const el = document.getElementById('msg'+type.charAt(0).toUpperCase()+type.slice(1));
   if (el) { el.textContent = text; el.classList.add('show'); }
 }
-function saveSession(token, user) {
+
+function saveSession(user, provider) {
   try {
-    sessionStorage.setItem('leadOS_token', token);
-    sessionStorage.setItem('leadOS_user', JSON.stringify(user));
-    sessionStorage.setItem('leadOS_provider', user.provider || 'email');
+    sessionStorage.setItem('leadOS_token', user.id || 'supabase_' + Date.now());
+    sessionStorage.setItem('leadOS_user',  JSON.stringify({
+      id:       user.id,
+      email:    user.email,
+      name:     user.user_metadata?.full_name || user.email,
+      provider: provider,
+      role:     'user',
+    }));
   } catch(e) {}
 }
-function go() { setTimeout(() => { window.location.href = 'leadOS-dashboard.html'; }, 700); }
+
+function go() {
+  setTimeout(() => { window.location.href = 'leadOS-dashboard.html'; }, 600);
+}
+
 function setSigninLoading(on) {
   const b = document.getElementById('signinBtn');
   b.disabled = on;
   b.innerHTML = on ? '<span class="spinner"></span>Signing in...' : 'Sign In →';
 }
 
-// ── Already logged in? ────────────────────────────────────────────────────
-try { if (sessionStorage.getItem('leadOS_token')) go(); } catch(e) {}
+// ── Already logged in? ──────────────────────────────────────────
+(async function checkSession() {
+  // Check Supabase session
+  if (supabase) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      saveSession(session.user, session.user.app_metadata?.provider || 'email');
+      go();
+      return;
+    }
+  }
+  // Check local session (demo mode)
+  try {
+    if (sessionStorage.getItem('leadOS_token')) go();
+  } catch(e) {}
+})();
 
-// ── Handle OAuth redirect-back (backend sets ?provider=&token=&email=) ───
-(function() {
-  const p = new URLSearchParams(window.location.search);
-  if (p.get('error')) { showMsg('error','Sign-in was cancelled or failed. Please try again.'); return; }
-  if (p.get('provider') && p.get('token')) {
-    const u = { id:'oauth_u', email:p.get('email')||'', name:p.get('name')||p.get('email')||'', provider:p.get('provider') };
-    saveSession(p.get('token'), u);
-    showMsg('success', 'Signed in with ' + LABELS[p.get('provider')] + '! Redirecting...');
+// ── Handle OAuth redirect back from Google / Microsoft ──────────
+(async function handleAuthCallback() {
+  if (!supabase) return;
+  // Supabase handles the token exchange automatically when the page loads
+  // after the OAuth redirect. We just need to check for the session.
+  const { data: { session }, error } = await supabase.auth.getSession();
+  if (error) {
+    showMsg('error', 'Sign-in failed: ' + error.message);
+    return;
+  }
+  if (session?.user && window.location.hash.includes('access_token')) {
+    saveSession(session.user, session.user.app_metadata?.provider || 'oauth');
+    showMsg('success', 'Signed in! Redirecting...');
     go();
-    history.replaceState({}, '', location.pathname);
   }
 })();
 
-// ── OAuth login ───────────────────────────────────────────────────────────
-async function oauthLogin(provider) {
-  const btnId = { google:'btnGoogle', microsoft:'btnMicrosoft' }[provider];
-  const btn = document.getElementById(btnId);
+// ── Google / Microsoft sign in ──────────────────────────────────
+async function signInWithProvider(provider) {
+  const btnId = provider === 'google' ? 'btnGoogle' : 'btnMicrosoft';
+  const btn   = document.getElementById(btnId);
   if (btn) btn.classList.add('loading');
 
-  // Mock mode — instant simulation
-  if (window.LeadOSConfig?.MOCK_MODE) {
-    await new Promise(r => setTimeout(r, 1100));
-    const emails = { google:'demo@gmail.com', microsoft:'demo@outlook.com' };
-    const u = { id:'oauth_'+provider, email:emails[provider], name:'Demo User', role:'admin', provider };
-    saveSession('mock_oauth_'+provider+'_'+Date.now(), u);
+  // Demo mode — simulate instantly
+  if (!isConfigured) {
+    await new Promise(r => setTimeout(r, 1000));
     if (btn) btn.classList.remove('loading');
-    showMsg('success', 'Signed in with ' + LABELS[provider] + '! Redirecting...');
-    go();
-    return;
-  }
-
-  // Live mode — check credentials are configured
-  if (!OAUTH[provider]?.clientId) {
-    if (btn) btn.classList.remove('loading');
-    document.getElementById('setupWarn').classList.add('show');
     showMsg('info',
-      LABELS[provider] + ' sign-in needs setup — add ' +
-      provider.toUpperCase() + '_CLIENT_ID to your .env file. ' +
-      'Click "OAuth Setup Guide" below for instructions.'
+      'Demo mode — add your Supabase keys to enable real ' +
+      (provider === 'google' ? 'Google' : 'Microsoft') + ' login. ' +
+      'See the yellow notice above for instructions.'
     );
     return;
   }
 
-  // Build authorization URL and redirect
-  const state = btoa(JSON.stringify({ provider, nonce: Math.random().toString(36).slice(2) }));
-  try { sessionStorage.setItem('oauth_state', state); } catch(e) {}
-
-  const q = new URLSearchParams({
-    client_id:     OAUTH[provider].clientId,
-    redirect_uri:  OAUTH[provider].redirect,
-    response_type: 'code',
-    scope:         OAUTH[provider].scope,
-    state,
+  // Real OAuth via Supabase
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider,
+    options: {
+      redirectTo: SITE_URL + '/leadOS-dashboard.html',
+      scopes: provider === 'azure' ? 'email profile User.Read' : 'email profile',
+    },
   });
-  if (provider === 'google')    { q.set('access_type','offline'); q.set('prompt','select_account'); }
-  if (provider === 'microsoft') { q.set('prompt','select_account'); }
-  // provider-specific params
 
-  window.location.href = OAUTH[provider].authUrl + '?' + q.toString();
+  if (error) {
+    if (btn) btn.classList.remove('loading');
+    showMsg('error', 'Sign-in failed: ' + error.message);
+  }
+  // If no error, Supabase redirects the browser to Google/Microsoft automatically
+  // The page will redirect — no need to remove loading state
 }
 
-// ── Email + password ──────────────────────────────────────────────────────
-async function handleLogin() {
+// ── Email + password ────────────────────────────────────────────
+async function handleEmailLogin() {
   const email = document.getElementById('emailInput').value.trim();
   const pw    = document.getElementById('pwInput').value;
-  if (!email) { showMsg('error','Please enter your email address.'); return; }
-  if (!pw)    { showMsg('error','Please enter your password.');      return; }
+  if (!email) { showMsg('error','Please enter your email.'); return; }
+  if (!pw)    { showMsg('error','Please enter your password.'); return; }
 
   setSigninLoading(true);
-  try {
-    if (window.LeadOSConfig?.MOCK_MODE) {
-      await new Promise(r => setTimeout(r, 700));
-      saveSession('mock_email_'+Date.now(), { id:'u1', email, name:email.split('@')[0], role:'admin', provider:'email' });
-      showMsg('success','Signed in! Redirecting...');
-      go(); return;
-    }
-    const res  = await fetch(LeadOSConfig.API_BASE_URL+'/auth/login', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ email, password:pw }),
-    });
-    const data = await res.json();
-    if (!res.ok) { showMsg('error', data.detail||'Invalid credentials. Please try again.'); setSigninLoading(false); return; }
-    saveSession(data.token, { ...data.user, provider:'email' });
+
+  // Demo shortcut — always works in demo mode
+  if (!isConfigured || (email === 'admin@leadOS.ai' && pw === 'LeadOS2024!')) {
+    await new Promise(r => setTimeout(r, 700));
+    saveSession({ id:'demo', email, user_metadata:{ full_name:'Demo User' } }, 'email');
     showMsg('success','Signed in! Redirecting...');
     go();
-  } catch(e) {
-    showMsg('error','Could not reach the server. Try Demo Login below.');
-    setSigninLoading(false);
+    return;
   }
+
+  // Real Supabase email auth
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password: pw });
+  if (error) {
+    showMsg('error', error.message.includes('Invalid')
+      ? 'Incorrect email or password.'
+      : error.message);
+    setSigninLoading(false);
+    return;
+  }
+  saveSession(data.user, 'email');
+  showMsg('success','Signed in! Redirecting...');
+  go();
 }
 
-// ── Demo login ────────────────────────────────────────────────────────────
+// ── Forgot password ─────────────────────────────────────────────
+async function handleForgot() {
+  const email = document.getElementById('emailInput').value.trim();
+  if (!email) { showMsg('info','Enter your email above first.'); return; }
+  if (!supabase) { showMsg('info','Configure Supabase to enable password reset.'); return; }
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: SITE_URL + '/leadOS-login.html',
+  });
+  if (error) { showMsg('error', error.message); return; }
+  showMsg('success', 'Password reset email sent to ' + email);
+}
+
+// ── Demo login ──────────────────────────────────────────────────
 async function demoLogin() {
   document.getElementById('emailInput').value = 'admin@leadOS.ai';
   document.getElementById('pwInput').value    = 'LeadOS2024!';
-  showMsg('info','Demo credentials loaded — signing in...');
-  await new Promise(r => setTimeout(r, 350));
-  handleLogin();
-}
-
-// ── Forgot password ───────────────────────────────────────────────────────
-function handleForgot() {
-  const email = document.getElementById('emailInput').value.trim();
-  if (!email) { showMsg('info','Enter your email above first, then click Forgot password.'); return; }
-  showMsg('success',`Reset instructions sent to ${email} (coming soon — contact support@leadOS.ai for now)`);
-}
-
-// ── OAuth setup docs ──────────────────────────────────────────────────────
-function showSetupDocs() {
-  document.getElementById('setupWarn').classList.add('show');
-  document.getElementById('setupWarn').scrollIntoView({ behavior:'smooth', block:'nearest' });
-}
-
-// Show setup warning in live mode if no OAuth configured
-if (!window.LeadOSConfig?.MOCK_MODE &&
-    !OAUTH.google.clientId
+  showMs
