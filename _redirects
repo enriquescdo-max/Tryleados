@@ -1,4 +1,4 @@
-# Clean URLs
+# Netlify redirects — clean URLs
 /login          /leadOS-login.html            200
 /dashboard      /leadOS-dashboard.html        200
 /discover       /leadOS-lead-discovery.html   200
@@ -8,9 +8,4 @@
 /analytics      /leadOS-analytics.html        200
 /admin          /leadOS-reseller-admin.html   200
 /signup         /leadOS-reseller-signup.html  200
-
-# Root → landing page
-/               /leadOS-landing-page.html     200
-
-# Catch-all 404 → landing page (instead of Netlify error page)
-/*              /leadOS-landing-page.html     200
+/content        /leadOS-contentOS.html        200
