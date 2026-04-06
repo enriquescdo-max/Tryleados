@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LeadOS — ContentOS</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a0f; color: #e2e8f0; min-height: 100vh; }
+  .sidebar { position: fixed; left: 0; top: 0; width: 220px; height: 100vh; background: #0f0f1a; border-right: 1px solid #1e1e3a; padding: 20px 0; z-index: 100; }
+  .logo { padding: 0 20px 24px; border-bottom: 1px solid #1e1e3a; margin-bottom: 16px; }
+  .logo h1 { font-size: 18px; font-weight: 700; background: linear-gradient(135deg, #6366f1, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .logo span { font-size: 11px; color: #64748b; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 20px; color: #94a3b8; font-size: 14px; cursor: pointer; transition: all 0.2s; text-decoration: none; }
+  .nav-item:hover { background: #1e1e3a; color: #e2e8f0; }
+  .nav-item.active { background: #1e1e3a; color: #6366f1; border-left: 3px solid #6366f1; }
+  .nav-icon { width: 18px; text-align: center; }
+  .main { margin-left: 220px; padding: 32px; }
+  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
+  .header h2 { font-size: 24px; font-weight: 700; }
+  .header p { color: #64748b; font-size: 14px; margin-top: 4px; }
+  .badge { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 600; }
+  .tabs { display: flex; gap: 4px; background: #0f0f1a; border: 1px solid #1e1e3a; border-radius: 10px; padding: 4px; margin-bottom: 28px; width: fit-content; }
+  .tab { padding: 8px 18px; border-radius: 8px; font-size: 13px; cursor: pointer; color: #64748b; transition: all 0.2s; border: none; background: none; }
+  .tab.active { background: #1e1e3a; color: #e2e8f0; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; margin-bottom: 32px; }
+  .card { background: #0f0f1a; border: 1px solid #1e1e3a; border-radius: 12px; padding: 20px; transition: border-color 0.2s; }
+  .card:hover { border-color: #6366f1; }
+  .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+  .card-title { font-size: 14px; font-weight: 600; color: #e2e8f0; }
+  .card-type { font-size: 11px; color: #6366f1; background: rgba(99,102,241,0.1); padding: 2px 8px; border-radius: 4px; }
+  .card-preview { font-size: 13px; color: #64748b; line-height: 1.6; margin-bottom: 14px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .card-meta { display: flex; gap: 12px; font-size: 11px; color: #475569; }
+  .card-actions { display: flex; gap: 8px; margin-top: 14px; }
+  .btn { padding: 7px 14px; border-radius: 7px; font-size: 12px; font-weight: 500; cursor: pointer; border: none; transition: all 0.2s; }
+  .btn-primary { background: #6366f1; color: white; }
+  .btn-primary:hover { background: #4f52d9; }
+  .btn-ghost { background: transparent; color: #94a3b8; border: 1px solid #1e1e3a; }
+  .btn-ghost:hover { border-color: #6366f1; color: #6366f1; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+  .stat { background: #0f0f1a; border: 1px solid #1e1e3a; border-radius: 12px; padding: 18px; }
+  .stat-value { font-size: 28px; font-weight: 700; background: linear-gradient(135deg, #6366f1, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .stat-label { font-size: 12px; color: #64748b; margin-top: 4px; }
+  .stat-delta { font-size: 11px; color: #22c55e; margin-top: 6px; }
+  .compose-bar { background: #0f0f1a; border: 1px solid #1e1e3a; border-radius: 12px; padding: 20px; margin-bottom: 28px; display: flex; gap: 12px; align-items: flex-start; }
+  .compose-input { flex: 1; background: #0a0a0f; border: 1px solid #1e1e3a; border-radius: 8px; padding: 12px; color: #e2e8f0; font-size: 14px; resize: none; min-height: 80px; outline: none; font-family: inherit; }
+  .compose-input:focus { border-color: #6366f1; }
+  .compose-actions { display: flex; flex-direction: column; gap: 8px; }
+  .performance-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #1a1a2e; }
+  .perf-name { flex: 1; font-size: 13px; color: #e2e8f0; }
+  .perf-bar-wrap { flex: 2; background: #1a1a2e; border-radius: 4px; height: 6px; overflow: hidden; }
+  .perf-bar { height: 100%; background: linear-gradient(90deg, #6366f1, #8b5cf6); border-radius: 4px; }
+  .perf-rate { width: 48px; text-align: right; font-size: 12px; color: #94a3b8; }
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="logo"><h1>LeadOS</h1><span>Content OS</span></div>
+  <a href="leadOS-dashboard.html" class="nav-item"><span class="nav-icon">📊</span> Dashboard</a>
+  <a href="leadOS-lead-discovery.html" class="nav-item"><span class="nav-icon">🔍</span> Lead Discovery</a>
+  <a href="leadOS-icp-builder.html" class="nav-item"><span class="nav-icon">🎯</span> ICP Builder</a>
+  <a href="leadOS-outreach.html" class="nav-item"><span class="nav-icon">📨</span> Outreach</a>
+  <a href="leadOS-contentOS.html" class="nav-item active"><span class="nav-icon">✍️</span> ContentOS</a>
+  <a href="leadOS-analytics.html" class="nav-item"><span class="nav-icon">📈</span> Analytics</a>
+  <a href="leadOS-crm-integrations.html" class="nav-item"><span class="nav-icon">🔗</span> Integrations</a>
+</div>
+<div class="main">
+  <div class="header">
+    <div><h2>ContentOS <span class="badge">AI-Powered</span></h2><p>Generate, schedule, and optimize content across every channel</p></div>
+    <button class="btn btn-primary" onclick="openCompose()">+ New Content</button>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="stat-value">248</div><div class="stat-label">Pieces Published</div><div class="stat-delta">↑ 18 this week</div></div>
+    <div class="stat"><div class="stat-value">41%</div><div class="stat-label">Avg Open Rate</div><div class="stat-delta">↑ 3.2% vs last month</div></div>
+    <div class="stat"><div class="stat-value">12k</div><div class="stat-label">Total Impressions</div><div class="stat-delta">↑ 2.1k this week</div></div>
+    <div class="stat"><div class="stat-value">8.4%</div><div class="stat-label">Engagement Rate</div><div class="stat-delta">↑ 1.1% vs last month</div></div>
+  </div>
+  <div class="compose-bar" id="composeBar" style="display:none;">
+    <div style="flex:1;">
+      <div style="display:flex;gap:8px;margin-bottom:10px;"><span style="font-size:13px;color:#94a3b8;">Channel:</span><button class="btn btn-ghost" style="padding:3px 10px;font-size:11px;" onclick="setChannel('email')">Email</button><button class="btn btn-ghost" style="padding:3px 10px;font-size:11px;" onclick="setChannel('linkedin')">LinkedIn</button><button class="btn btn-ghost" style="padding:3px 10px;font-size:11px;" onclick="setChannel('sms')">SMS</button><button class="btn btn-ghost" style="padding:3px 10px;font-size:11px;" onclick="setChannel('blog')">Blog</button></div>
+      <textarea class="compose-input" id="composeInput" placeholder="Describe your content goal and target audience — AI will draft it for you..."></textarea>
+    </div>
+    <div class="compose-actions"><button class="btn btn-primary" onclick="generateContent()">⚡ Generate</button><button class="btn btn-ghost" onclick="closeCompose()">Cancel</button></div>
+  </div>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab(this,'all')">All Content</button>
+    <button class="tab" onclick="switchTab(this,'email')">Email</button>
+    <button class="tab" onclick="switchTab(this,'linkedin')">LinkedIn</button>
+    <button class="tab" onclick="switchTab(this,'sms')">SMS</button>
+    <button class="tab" onclick="switchTab(this,'blog')">Blog</button>
+    <button class="tab" onclick="switchTab(this,'performance')">Performance</button>
+  </div>
+  <div id="content-all"><div class="grid" id="contentGrid"></div></div>
+  <div id="content-performance" style="display:none;"><div class="card" style="padding:24px;"><div style="font-size:16px;font-weight:600;margin-bottom:16px;">Content Performance</div><div id="perfRows"></div></div></div>
+</div>
+<script>
+const D=[{title:"Cold Email — SaaS CFOs Q2",type:"email",channel:"email",preview:"Subject: Cut your finance ops cost by 40% — Hi {{first_name}}, I noticed {{company}} recently expanded. Your team likely spends 8+ hours/week on manual reconciliation.",opens:"44%",clicks:"12%",sent:"312"},{title:"LinkedIn Post — AI Automation ROI",type:"linkedin",channel:"linkedin",preview:"Most CFOs I talk to are shocked: their finance team spends 34% of their time on tasks AI can handle today. Here's the breakdown...",impressions:"4.2k",engagement:"9.1%"},{title:"SMS Nudge — Demo No-Shows",type:"sms",channel:"sms",preview:"Hey {{first_name}} — quick reminder about our 2pm demo today. Reply YES to confirm or RESCHEDULE to pick a new time. 👍",deliveries:"88",replied:"61%"},{title:"Blog — State of AI in B2B Sales 2026",type:"blog",channel:"blog",preview:"AI is no longer a differentiator in B2B sales — it's the baseline. Companies still relying on manual prospecting are losing deals before the first call...",views:"1.8k",shares:"143"},{title:"Email Sequence — Onboarding Day 3",type:"email",channel:"email",preview:"Subject: Your first lead report is ready 🎉 — Hi {{first_name}}, you've been with LeadOS for 3 days. Here's what your agents found so far...",opens:"68%",clicks:"31%",sent:"204"},{title:"LinkedIn DM — Insurance ICP",type:"linkedin",channel:"linkedin",preview:"Hi {{first_name}}, I saw you're heading up ops at {{company}} — we help mid-market insurance carriers cut lead qualification time by 60%. Worth a 15-min chat?",impressions:"—",engagement:"—"},{title:"Blog — How to Build an ICP That Actually Works",type:"blog",channel:"blog",preview:"Most ICPs are built wrong. They describe who your customers are — not why they buy. In this post we walk through the LeadOS ICP framework used by 200+ B2B teams...",views:"3.1k",shares:"287"}];
+const P=[{name:"Onboarding Day 3 Email",rate:68,label:"68% open rate"},{name:"Re-engagement SMS",rate:61,label:"61% reply rate"},{name:"LinkedIn AI ROI Post",rate:54,label:"54% engagement"},{name:"CFO Cold Email Q2",rate:44,label:"44% open rate"},{name:"ICP Blog Post",rate:38,label:"38% read rate"}];
+let ac='email',ct='all';
+function renderCards(f){const g=document.getElementById('contentGrid'),items=f==='all'?D:D.filter(d=>d.channel===f);if(!items.length){g.innerHTML='<div style="text-align:center;padding:60px;color:#475569"><h3 style="color:#64748b">No content yet</h3><p>Click "+ New Content" to generate your first piece.</p></div>';return;}g.innerHTML=items.map(i=>{const m=i.opens?`<span>📬 ${i.opens} opens</span><span>🔗 ${i.clicks} clicks</span><span>📤 ${i.sent} sent</span>`:i.impressions?`<span>👁 ${i.impressions} impressions</span><span>💬 ${i.engagement}</span>`:`<span>📱 ${i.deliveries||i.views} ${i.deliveries?'delivered':'views'}</span><span>${i.replied?'↩️ '+i.replied+' replied':'🔄 '+i.shares+' shares'}</span>`;return`<div class="card"><div class="card-header"><span class="card-title">${i.title}</span><span class="card-type">${i.type}</span></div><div class="card-preview">${i.preview}</div><div class="card-meta">${m}</div><div class="card-actions"><button class="btn btn-primary">✏️ Edit</button><button class="btn btn-ghost">📋 Duplicate</button><button class="btn btn-ghost">⚡ Optimize</button></div></div>`;}).join('');}
+function renderPerf(){document.getElementById('perfRows').innerHTML=P.map(p=>`<div class="performance-row"><span class="perf-name">${p.name}</span><div class="perf-bar-wrap"><div class="perf-bar" style="width:${p.rate}%"></div></div><span class="perf-rate">${p.label}</span></div>`).join('');}
+function switchTab(b,t){document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));b.classList.add('active');ct=t;document.getElementById('content-all').style.display=t==='performance'?'none':'block';document.getElementById('content-performance').style.display=t==='performance'?'block':'none';if(t!=='performance')renderCards(t);else renderPerf();}
+function openCompose(){document.getElementById('composeBar').style.display='flex';document.getElementById('composeInput').focus();}
+function closeCompose(){document.getElementById('composeBar').style.display='none';}
+function setChannel(c){ac=c;}
+function generateContent(){const v=document.getElementById('composeInput').value.trim();if(!v)return;D.unshift({title:'AI Draft — '+ac.charAt(0).toUpperCase()+ac.slice(1),type:ac,channel:ac,preview:'Generating: '+v+' [AI drafting based on your ICP and past performance...]',opens:'—',clicks:'—',sent:'0'});closeCompose();renderCards(ct==='all'?'all':ct);}
+renderCards('all');
+</script>
+</body>
+</html>
