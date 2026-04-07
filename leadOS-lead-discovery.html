@@ -139,15 +139,17 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
     <div class="nav-section">Core</div>
     <a href="leadOS-dashboard.html" class="nav-item" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:12px;margin-bottom:2px;transition:all .2s;"><span class="icon">⬡</span> Command Center</a>
     <a href="leadOS-lead-discovery.html" class="nav-item active" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:12px;margin-bottom:2px;transition:all .2s;"><span class="icon">🔍</span> Lead Discovery <span class="badge">NEW</span></a>
-    <div class="nav-item" style="opacity:0.45;cursor:not-allowed;" title="Coming soon" onclick="showComingSoon('AI Agents')"><span class="icon">🤖</span> AI Agents</div>
-    <div class="nav-item" style="opacity:0.45;cursor:not-allowed;" title="Coming soon" onclick="showComingSoon('Pipeline')"><span class="icon">📊</span> Pipeline</div>
+    <div class="nav-item" style="cursor:pointer;" onclick="window.location.href='leadOS-dashboard.html'"><span class="icon">🤖</span> AI Agents</div>
+    <div class="nav-item" style="cursor:pointer;" onclick="window.location.href='leadOS-analytics.html'"><span class="icon">📊</span> Pipeline</div>
     <a href="leadOS-outreach.html" class="nav-item" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:12px;margin-bottom:2px;transition:all .2s;"><span class="icon">✉️</span> Outreach</a>
     <div class="nav-section">Intelligence</div>
-    <div class="nav-item" style="opacity:0.45;cursor:not-allowed;" title="Coming soon" onclick="showComingSoon('Lead Scoring')"><span class="icon">🧠</span> Lead Scoring</div>
+    <div class="nav-item" style="cursor:pointer;" onclick="window.location.href='leadOS-icp-builder.html'"><span class="icon">🧠</span> Lead Scoring</div>
     <a href="leadOS-icp-builder.html" class="nav-item" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:12px;margin-bottom:2px;transition:all .2s;"><span class="icon">🎯</span> ICP Builder</a>
+        <div class="nav-section">Content Engine</div>
+    <a href="leadOS-contentOS.html" class="nav-item" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:12px;margin-bottom:2px;transition:all .2s;"><span class="icon">🎬</span> ContentOS <span class="badge green" style="background:var(--accent);color:#000;font-size:9px;padding:2px 6px;border-radius:20px;font-weight:600;margin-left:auto">NEW</span></a>
     <div class="nav-section">System</div>
     <a href="leadOS-crm-integrations.html" class="nav-item" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:12px;margin-bottom:2px;transition:all .2s;"><span class="icon">🔗</span> Integrations</a>
-    <div class="nav-item" style="opacity:0.45;cursor:not-allowed;" title="Coming soon" onclick="showComingSoon('Settings')"><span class="icon">⚙️</span> Settings</div>
+    <div class="nav-item" style="cursor:pointer;" onclick="window.location.href='leadOS-icp-builder.html'"><span class="icon">⚙️</span> Settings</div>
   </nav>
 
   <!-- Logout link -->
@@ -283,64 +285,83 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
     sigs.innerHTML = (l.intent_signals||[]).map(s=>`<div style="display:flex;align-items:center;gap:8px"><span style="color:var(--a4)">⚡</span><span>${s}</span></div>`).join('') || '<span style="color:var(--muted)">No signals detected</span>';
   }
 
+  // ── Shared card renderer ──────────────────────────────────────────────
+  function renderLeads(leads, total, labelHtml) {
+    const list = document.getElementById('leadsList');
+    document.getElementById('resultsCount').innerHTML = labelHtml ||
+      `Showing <strong>${total}</strong> leads &middot; <strong style="color:var(--accent)">${leads.filter(l=>l.ai_score>=70).length}</strong> above ICP threshold`;
+    list.innerHTML = '';
+    if (!leads.length) {
+      list.innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted);font-size:12px">No leads found. Try a different search.</div>';
+      return;
+    }
+    leads.forEach((l, i) => {
+      const score = l.ai_score || 0;
+      const sc    = LeadOSUI.scoreColor(score);
+      const initials = (l.name||'?').split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
+      const ci    = i % bgColors.length;
+      const card  = document.createElement('div');
+      card.className = 'lead-card' + (i===0 ? ' selected' : '');
+      card.style.animation = `fadeUp .3s ease ${i*0.05}s both`;
+      card.onclick = () => {
+        document.querySelectorAll('.lead-card').forEach(c=>c.classList.remove('selected'));
+        card.classList.add('selected');
+        populateDetail(l);
+      };
+      card.innerHTML = `
+        <div class="lead-avatar" style="background:${bgColors[ci]};color:${tcColors[ci]}">${initials}</div>
+        <div>
+          <div class="lead-name-row">${l.name||'Unknown'}<span style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;font-weight:400"> @ ${l.company||'—'}</span></div>
+          <div class="lead-title-row">${l.title||'—'}</div>
+          <div class="lead-signals">
+            ${(l.intent_signals||[]).slice(0,2).map(s=>`<span class="signal-pill">${s}</span>`).join('')}
+            ${l.email_verified?'<span class="signal-pill green">✓ Verified</span>':''}
+          </div>
+        </div>
+        <div style="text-align:center;flex-shrink:0">
+          <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:${sc}">${score||'—'}</div>
+          <div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">AI Score</div>
+        </div>
+        <div class="lead-actions">
+          <button class="btn btn-primary" style="font-size:9px;padding:5px 10px" onclick="event.stopPropagation();addToSeq(this)">+ Sequence</button>
+          <button class="btn btn-ghost"   style="font-size:9px;padding:5px 10px" onclick="event.stopPropagation();pushCRM(this)">CRM Push</button>
+        </div>`;
+      list.appendChild(card);
+      if (i===0) populateDetail(l);
+    });
+  }
+
   async function loadLeads() {
     const list = document.getElementById('leadsList');
     LeadOSUI.skeleton(list, 5);
     try {
       const { leads, total } = await LeadOSAPI.getLeads({ limit: 20 });
-      document.getElementById('resultsCount').innerHTML =
-        `Showing <strong>${total}</strong> leads &middot; <strong style="color:var(--accent)">${leads.filter(l=>l.ai_score>=70).length}</strong> above ICP threshold`;
-      list.innerHTML = '';
-      leads.forEach((l, i) => {
-        const score = l.ai_score || 0;
-        const sc = LeadOSUI.scoreColor(score);
-        const initials = l.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
-        const ci = i % bgColors.length;
-        const card = document.createElement('div');
-        card.className = 'lead-card' + (i===0?' selected':'');
-        card.style.animation = `fadeUp .3s ease ${i*0.05}s both`;
-        card.onclick = () => {
-          document.querySelectorAll('.lead-card').forEach(c=>c.classList.remove('selected'));
-          card.classList.add('selected');
-          populateDetail(l);
-        };
-        card.innerHTML = `
-          <div class="lead-avatar" style="background:${bgColors[ci]};color:${tcColors[ci]}">${initials}</div>
-          <div>
-            <div class="lead-name-row">${l.name}<span style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;font-weight:400"> @ ${l.company}</span></div>
-            <div class="lead-title-row">${l.title}</div>
-            <div class="lead-signals">
-              ${(l.intent_signals||[]).slice(0,2).map(s=>`<span class="signal-pill">${s}</span>`).join('')}
-              ${l.email_verified?'<span class="signal-pill green">✓ Verified</span>':''}
-            </div>
-          </div>
-          <div style="text-align:center;flex-shrink:0">
-            <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:${sc}">${score||'—'}</div>
-            <div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">AI Score</div>
-          </div>
-          <div class="lead-actions">
-            <button class="btn btn-primary" style="font-size:9px;padding:5px 10px" onclick="event.stopPropagation();addToSeq(this)">+ Sequence</button>
-            <button class="btn btn-ghost"   style="font-size:9px;padding:5px 10px" onclick="event.stopPropagation();pushCRM(this)">CRM Push</button>
-          </div>`;
-        list.appendChild(card);
-        if (i===0) populateDetail(l);
-      });
+      renderLeads(leads, total);
     } catch(e) {
       LeadOSUI.error(list, 'Could not load leads — ' + e.message);
     }
   }
 
+  // ── runSearch: real POST to /leads/search ─────────────────────────────
   window.runSearch = async function() {
     const input = document.getElementById('aiSearch');
-    const prompt = input?.value?.trim();
-    if (!prompt) return;
+    const query = input?.value?.trim();
+    if (!query) return;
     const btn = document.querySelector('.search-hero .btn-primary');
+    const list = document.getElementById('leadsList');
     if (btn) { btn.textContent = '⏳ Searching...'; btn.disabled = true; }
+    LeadOSUI.skeleton(list, 5);
     try {
-      await LeadOSAPI.runCampaign({ prompt, sources:['crawler','linkedin'], max_leads:50 });
-      LeadOSUI.toast('AI campaign launched — leads arriving shortly', 'success');
-      setTimeout(loadLeads, 2000);
+      const data = await LeadOSAPI.searchLeads(query, 20);
+      const leads = data.leads || data.results || [];
+      const total = data.total ?? leads.length;
+      renderLeads(
+        leads, total,
+        `<strong>${total}</strong> results for "<strong style="color:var(--accent)">${query}</strong>"`
+      );
+      LeadOSUI.toast(`Found ${total} lead${total!==1?'s':''} — showing top ${Math.min(total,20)}`, 'success');
     } catch(e) {
+      LeadOSUI.error(list, 'Search failed — ' + e.message);
       LeadOSUI.toast('Search failed: ' + e.message, 'error');
     } finally {
       if (btn) { btn.textContent = '⚡ Search'; btn.disabled = false; }
