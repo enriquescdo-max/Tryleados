@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LeadOS — Jamie's Apartment Locator Campaign</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800;900&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#050810;--s1:#0c1120;--s2:#111827;--s3:#161e30;--b1:rgba(255,255,255,0.06);--b2:rgba(255,255,255,0.1);--g:#00ff88;--g2:rgba(0,255,136,0.1);--g3:rgba(0,255,136,0.05);--bl:#3b82f6;--pu:#8b5cf6;--am:#f59e0b;--re:#ef4444;--pi:#ec4899;--t:#eef4ff;--t2:#5a7099;--t3:#2d3f5a;--display:'Syne',sans-serif;--mono:'DM Mono',monospace}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--t);font-family:var(--mono);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,255,136,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,136,0.025) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+
+/* Sidebar */
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:220px;background:var(--s1);border-right:1px solid var(--b1);display:flex;flex-direction:column;z-index:100}
+.logo-area{padding:24px 20px;border-bottom:1px solid var(--b1)}
+.logo{font-family:var(--display);font-size:20px;font-weight:800;display:flex;align-items:center;gap:8px}
+.logo-icon{width:30px;height:30px;background:var(--g);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:#000}
+.logo span{color:var(--g)}
+.logo-sub{font-size:9px;color:var(--t2);letter-spacing:2px;margin-top:3px;text-transform:uppercase}
+.nav{padding:12px;flex:1;overflow-y:auto}
+.nav-section{font-size:9px;color:var(--t3);letter-spacing:2px;text-transform:uppercase;padding:10px 8px 5px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 11px;border-radius:7px;cursor:pointer;font-size:11px;color:var(--t2);transition:all .2s;margin-bottom:2px;text-decoration:none}
+.nav-item:hover{background:rgba(255,255,255,0.04);color:var(--t)}
+.nav-item.active{background:rgba(236,72,153,0.1);color:var(--pi);border:1px solid rgba(236,72,153,0.2)}
+.nav-badge{margin-left:auto;font-size:8px;padding:2px 6px;border-radius:10px;font-weight:600}
+.nb-pink{background:var(--pi);color:#fff}
+.nb-green{background:var(--g);color:#000}
+
+/* Main */
+.main{margin-left:220px;min-height:100vh;position:relative;z-index:1}
+.topbar{height:62px;border-bottom:1px solid var(--b1);display:flex;align-items:center;padding:0 26px;gap:14px;background:rgba(5,8,16,0.9);backdrop-filter:blur(12px);position:sticky;top:0;z-index:50}
+.page-title{font-family:var(--display);font-size:17px;font-weight:800}
+.page-title span{color:var(--pi)}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+
+.btn{padding:8px 16px;border-radius:8px;font-family:var(--mono);font-size:11px;font-weight:600;cursor:pointer;border:none;transition:all .2s;display:inline-flex;align-items:center;gap:6px}
+.btn-pink{background:var(--pi);color:#fff;font-weight:700}
+.btn-pink:hover{background:#f472b6;transform:translateY(-1px);box-shadow:0 4px 16px rgba(236,72,153,0.35)}
+.btn-g{background:var(--g);color:#000;font-weight:700}
+.btn-g:hover{background:#00e87a;transform:translateY(-1px)}
+.btn-ghost{background:transparent;color:var(--t2);border:1px solid var(--b1)}
+.btn-ghost:hover{color:var(--t);border-color:var(--b2)}
+
+.content{padding:24px}
+
+/* Hero banner */
+.hero-banner{background:linear-gradient(135deg,rgba(236,72,153,0.12) 0%,rgba(139,92,246,0.08) 100%);border:1px solid rgba(236,72,153,0.2);border-radius:16px;padding:24px 28px;margin-bottom:24px;display:flex;align-items:center;gap:20px}
+.hero-icon{font-size:40px}
+.hero-text h2{font-family:var(--display);font-size:22px;font-weight:900;margin-bottom:4px}
+.hero-text h2 span{color:var(--pi)}
+.hero-text p{font-size:11px;color:var(--t2);line-height:1.7}
+.hero-stats{margin-left:auto;display:flex;gap:16px;flex-shrink:0}
+.h-stat{text-align:center}
+.h-stat-val{font-family:var(--display);font-size:26px;font-weight:900;color:var(--pi)}
+.h-stat-lbl{font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:1px}
+
+/* Quick launch */
+.quick-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}
+.quick-card{background:var(--s1);border:1px solid var(--b1);border-radius:12px;padding:18px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.quick-card:hover{border-color:var(--b2);transform:translateY(-2px)}
+.quick-card.active{border-color:rgba(236,72,153,0.3);background:rgba(236,72,153,0.05)}
+.qc-icon{font-size:22px;margin-bottom:10px}
+.qc-name{font-family:var(--display);font-size:13px;font-weight:700;margin-bottom:4px}
+.qc-desc{font-size:10px;color:var(--t2);line-height:1.6;margin-bottom:12px}
+.qc-meta{font-size:9px;color:var(--t3);display:flex;gap:8px;flex-wrap:wrap}
+.qc-tag{background:var(--s2);border:1px solid var(--b1);border-radius:3px;padding:1px 6px;color:var(--t2)}
+.qc-run{position:absolute;bottom:14px;right:14px;font-size:9px;color:var(--pi);font-weight:600;cursor:pointer}
+
+/* Search bar */
+.search-section{background:var(--s1);border:1px solid var(--b1);border-radius:14px;padding:20px;margin-bottom:20px}
+.search-label{font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:2px;margin-bottom:10px}
+.search-bar{display:flex;gap:10px;margin-bottom:12px}
+.search-input{flex:1;background:var(--s2);border:1px solid rgba(236,72,153,0.25);border-radius:9px;padding:12px 16px;font-family:var(--mono);font-size:12px;color:var(--t);outline:none;transition:border-color .2s}
+.search-input:focus{border-color:rgba(236,72,153,0.5);box-shadow:0 0 0 3px rgba(236,72,153,0.05)}
+.search-input::placeholder{color:var(--t3)}
+.quick-prompts{display:flex;flex-wrap:wrap;gap:6px}
+.qp{font-size:10px;padding:5px 10px;border-radius:6px;background:var(--s2);border:1px solid var(--b1);cursor:pointer;color:var(--t2);transition:all .15s}
+.qp:hover{border-color:rgba(236,72,153,0.3);color:var(--pi);background:rgba(236,72,153,0.05)}
+
+/* Results */
+.results-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px}
+.lead-card{background:var(--s1);border:1px solid var(--b1);border-radius:12px;padding:16px;transition:all .2s}
+.lead-card:hover{border-color:var(--b2);transform:translateY(-1px)}
+.lead-card.hot{border-color:rgba(236,72,153,0.25);background:rgba(236,72,153,0.03)}
+.lc-top{display:flex;align-items:flex-start;gap:12px;margin-bottom:10px}
+.lc-av{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:14px;font-weight:900;flex-shrink:0}
+.lc-info{flex:1}
+.lc-name{font-size:13px;font-weight:600;margin-bottom:2px}
+.lc-title{font-size:10px;color:var(--t2)}
+.lc-score{font-family:var(--display);font-size:24px;font-weight:900;color:var(--pi);flex-shrink:0}
+.lc-signals{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px}
+.signal{font-size:9px;padding:3px 8px;border-radius:4px;background:var(--s2);border:1px solid var(--b1);color:var(--t2)}
+.signal.hot{background:rgba(236,72,153,0.1);border-color:rgba(236,72,153,0.2);color:var(--pi)}
+.signal.warm{background:rgba(245,158,11,0.1);border-color:rgba(245,158,11,0.2);color:var(--am)}
+.lc-actions{display:flex;gap:7px}
+
+/* Sequences */
+.seq-list{display:flex;flex-direction:column;gap:10px;margin-bottom:20px}
+.seq-card{background:var(--s1);border:1px solid var(--b1);border-radius:12px;padding:16px;display:flex;align-items:center;gap:14px;transition:all .2s}
+.seq-card:hover{border-color:var(--b2)}
+.seq-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.seq-info{flex:1}
+.seq-name{font-size:12px;font-weight:600;margin-bottom:3px}
+.seq-desc{font-size:10px;color:var(--t2)}
+.seq-stats{display:flex;gap:14px;font-size:9px;margin-top:6px}
+.seq-stat{color:var(--t3)}
+.seq-stat span{color:var(--t2)}
+.seq-actions{display:flex;gap:7px;flex-shrink:0}
+
+/* Partners */
+.partners-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.partner-card{background:var(--s1);border:1px solid var(--b1);border-radius:12px;padding:16px}
+.pc-header{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.pc-icon{font-size:20px}
+.pc-type{font-family:var(--display);font-size:12px;font-weight:700}
+.pc-count{margin-left:auto;font-size:9px;color:var(--t3)}
+.pc-companies{display:flex;flex-wrap:wrap;gap:5px}
+.pc-co{font-size:9px;padding:3px 8px;border-radius:4px;background:var(--s2);border:1px solid var(--b1);color:var(--t2);cursor:pointer;transition:all .15s}
+.pc-co:hover{border-color:rgba(236,72,153,0.3);color:var(--pi)}
+
+/* Stats row */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.stat-card{background:var(--s1);border:1px solid var(--b1);border-radius:12px;padding:16px;position:relative;overflow:hidden}
+.stat-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--pi),transparent)}
+.stat-val{font-family:var(--display);font-size:28px;font-weight:900;color:var(--pi);margin-bottom:3px}
+.stat-lbl{font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:1px}
+.stat-delta{font-size:9px;color:var(--g);margin-top:4px}
+
+/* Section header */
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.sec-title{font-family:var(--display);font-size:14px;font-weight:700}
+
+/* Toast */
+#toast{position:fixed;bottom:24px;right:24px;z-index:999;display:flex;flex-direction:column;gap:8px}
+.toast-item{background:rgba(236,72,153,0.1);border:1px solid rgba(236,72,153,0.25);border-radius:10px;padding:12px 16px;font-size:11px;color:var(--t);transform:translateX(120%);transition:transform .3s;box-shadow:0 8px 32px rgba(0,0,0,.5)}
+.toast-item.show{transform:translateX(0)}
+
+/* Loading */
+.loading-bar{height:2px;background:linear-gradient(90deg,var(--pi),var(--pu),var(--pi));background-size:200% 100%;animation:loading 1.5s linear infinite;border-radius:2px;display:none}
+.loading-bar.active{display:block}
+@keyframes loading{0%{background-position:200% 0}100%{background-position:-200% 0}}
+@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(236,72,153,.4)}50%{opacity:.7;box-shadow:0 0 0 6px rgba(236,72,153,0)}}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--pi);display:inline-block;margin-right:6px;animation:pulse 1.5s infinite}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--b1);border-radius:2px}
+</style>
+</head>
+<body>
+
+<!-- Auth guard -->
+<script>
+try { if (!sessionStorage.getItem('leadOS_token')) window.location.href = 'leadOS-login.html'; } catch(e) {}
+</script>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="logo-area">
+    <div class="logo">
+      <div class="logo-icon">L</div>
+      Lead<span>OS</span>
+    </div>
+    <div class="logo-sub">Apartment Locator Mode</div>
+  </div>
+  <nav class="nav">
+    <div class="nav-section">Jamie's Campaign</div>
+    <a href="leadOS-apartment-locator.html" class="nav-item active">🏠 Apartment Locator <span class="nav-badge nb-pink">LIVE</span></a>
+    <div class="nav-section">LeadOS Core</div>
+    <a href="leadOS-dashboard.html" class="nav-item">⬡ Command Center</a>
+    <a href="leadOS-lead-discovery.html" class="nav-item">🔍 Lead Discovery</a>
+    <a href="leadOS-outreach.html" class="nav-item">✉️ Outreach</a>
+    <a href="leadOS-icp-builder.html" class="nav-item">🎯 ICP Builder</a>
+    <a href="leadOS-analytics.html" class="nav-item">📈 Analytics</a>
+    <a href="leadOS-contentOS.html" class="nav-item">🎬 ContentOS <span class="nav-badge nb-green">NEW</span></a>
+    <div class="nav-section">System</div>
+    <a href="leadOS-crm-integrations.html" class="nav-item">🔗 Integrations</a>
+    <div class="nav-item" onclick="handleLogout()" style="cursor:pointer;color:var(--t2)">🚪 Sign Out</div>
+  </nav>
+</aside>
+
+<!-- Main -->
+<main class="main">
+  <div class="topbar">
+    <div class="page-title">🏠 Jamie's <span>Apartment Locator</span> Campaign</div>
+    <div class="loading-bar" id="loadingBar" style="position:absolute;bottom:0;left:220px;right:0"></div>
+    <div class="topbar-right">
+      <span style="font-size:10px;color:var(--t2)"><span class="live-dot"></span>Austin, TX Market</span>
+      <button class="btn btn-pink" onclick="launchFullCampaign()">🚀 Launch Full Campaign</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- Hero -->
+    <div class="hero-banner">
+      <div class="hero-icon">🏠</div>
+      <div class="hero-text">
+        <h2>Jamie's <span>Apartment Locator</span> AI Engine</h2>
+        <p>AI-powered lead generation for Austin apartment locating. Finds people relocating to Austin,<br>new hires at major employers, and remote workers choosing Austin as their base.</p>
+      </div>
+      <div class="hero-stats">
+        <div class="h-stat">
+          <div class="h-stat-val" id="leadsFound">0</div>
+          <div class="h-stat-lbl">Leads Found</div>
+        </div>
+        <div class="h-stat">
+          <div class="h-stat-val" id="seqActive">0</div>
+          <div class="h-stat-lbl">In Sequence</div>
+        </div>
+        <div class="h-stat">
+          <div class="h-stat-val" id="placementsVal">0</div>
+          <div class="h-stat-lbl">Placements</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-val" id="weeklyLeads">0</div>
+        <div class="stat-lbl">Leads This Week</div>
+        <div class="stat-delta">↑ Target: 50/week</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="openRate">—</div>
+        <div class="stat-lbl">Email Open Rate</div>
+        <div class="stat-delta">↑ Industry avg: 28%</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="monthlyRev">$0</div>
+        <div class="stat-lbl">Monthly Revenue</div>
+        <div class="stat-delta">↑ Target: $2,000/mo</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="avgComm">$500</div>
+        <div class="stat-lbl">Avg Commission</div>
+        <div class="stat-delta">Per placement</div>
+      </div>
+    </div>
+
+    <!-- Quick Launch -->
+    <div class="sec-hdr">
+      <div class="sec-title">⚡ Quick Launch Campaigns</div>
+      <span style="font-size:10px;color:var(--t2)">One click to start finding leads</span>
+    </div>
+    <div class="quick-grid">
+      <div class="quick-card" onclick="runCampaign('new-hire')">
+        <div class="qc-icon">💼</div>
+        <div class="qc-name">New Austin Hires</div>
+        <div class="qc-desc">Finds people who just accepted jobs in Austin and need housing. Highest urgency — most need housing within 30 days.</div>
+        <div class="qc-meta">
+          <span class="qc-tag">LinkedIn</span>
+          <span class="qc-tag">Indeed</span>
+          <span class="qc-tag">Score: 95</span>
+        </div>
+        <div class="qc-run">▶ Run →</div>
+      </div>
+      <div class="quick-card" onclick="runCampaign('remote-worker')">
+        <div class="qc-icon">💻</div>
+        <div class="qc-name">Remote Workers Moving to Austin</div>
+        <div class="qc-desc">Targets remote workers choosing Austin as their new base. High volume, flexible timeline, great for building pipeline.</div>
+        <div class="qc-meta">
+          <span class="qc-tag">Reddit</span>
+          <span class="qc-tag">Twitter/X</span>
+          <span class="qc-tag">Score: 85</span>
+        </div>
+        <div class="qc-run">▶ Run →</div>
+      </div>
+      <div class="quick-card" onclick="runCampaign('lease-ending')">
+        <div class="qc-icon">📅</div>
+        <div class="qc-name">Lease Ending Soon</div>
+        <div class="qc-desc">Finds renters whose lease ends in 30-60 days actively searching for their next place. Highest conversion rate.</div>
+        <div class="qc-meta">
+          <span class="qc-tag">Facebook</span>
+          <span class="qc-tag">Reddit</span>
+          <span class="qc-tag">Score: 88</span>
+        </div>
+        <div class="qc-run">▶ Run →</div>
+      </div>
+      <div class="quick-card" onclick="runCampaign('ut-grads')">
+        <div class="qc-icon">🎓</div>
+        <div class="qc-name">UT Austin New Grads</div>
+        <div class="qc-desc">Recent UT Austin graduates starting their first job and needing their first apartment. Peak season: May-August.</div>
+        <div class="qc-meta">
+          <span class="qc-tag">LinkedIn</span>
+          <span class="qc-tag">UT Austin</span>
+          <span class="qc-tag">Score: 80</span>
+        </div>
+        <div class="qc-run">▶ Run →</div>
+      </div>
+      <div class="quick-card" onclick="runCampaign('hr-partners')">
+        <div class="qc-icon">🏢</div>
+        <div class="qc-name">HR Partner Outreach</div>
+        <div class="qc-desc">Contacts HR Directors at Tesla, Apple, Samsung, Dell, Oracle in Austin. Get added to their new hire welcome packet.</div>
+        <div class="qc-meta">
+          <span class="qc-tag">LinkedIn</span>
+          <span class="qc-tag">Email</span>
+          <span class="qc-tag">B2B</span>
+        </div>
+        <div class="qc-run">▶ Run →</div>
+      </div>
+      <div class="quick-card" onclick="runCampaign('corporate-relocation')">
+        <div class="qc-icon">✈️</div>
+        <div class="qc-name">Corporate Relocation</div>
+        <div class="qc-desc">Targets companies moving employees to Austin. Company often covers relocation costs — highest commission potential.</div>
+        <div class="qc-meta">
+          <span class="qc-tag">Austin Biz Journal</span>
+          <span class="qc-tag">PR Newswire</span>
+          <span class="qc-tag">Score: 92</span>
+        </div>
+        <div class="qc-run">▶ Run →</div>
+      </div>
+    </div>
+
+    <!-- Search -->
+    <div class="search-section">
+      <div class="search-label">🔍 Custom Lead Search — Austin Apartment Seekers</div>
+      <div class="search-bar">
+        <input class="search-input" id="searchInput" placeholder='Try: "people moving to Austin TX for new tech job in 2026"'/>
+        <button class="btn btn-pink" onclick="runSearch()">⚡ Find Leads</button>
+      </div>
+      <div class="quick-prompts">
+        <div class="qp" onclick="setSearch('People relocating to Austin TX for new job 2026')">🏠 New job relocators</div>
+        <div class="qp" onclick="setSearch('Remote workers moving to Austin TX from California')">💻 CA remote workers</div>
+        <div class="qp" onclick="setSearch('UT Austin graduates 2026 looking for first apartment')">🎓 UT grads</div>
+        <div class="qp" onclick="setSearch('HR directors Austin TX tech companies new hires relocation')">🏢 HR partners</div>
+        <div class="qp" onclick="setSearch('People asking for Austin apartment recommendations Reddit Facebook')">📱 Social seekers</div>
+        <div class="qp" onclick="setSearch('Tesla Apple Samsung Dell Oracle new employees Austin housing')">⚡ Big tech hires</div>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div class="sec-hdr">
+      <div class="sec-title">🎯 Lead Results</div>
+      <span id="resultsCount" style="font-size:10px;color:var(--t2)">Run a campaign to see leads</span>
+    </div>
+    <div class="results-grid" id="resultsGrid">
+      <div style="grid-column:span 2;background:var(--s1);border:1px solid var(--b1);border-radius:12px;padding:32px;text-align:center;color:var(--t2);font-size:11px">
+        <div style="font-size:32px;margin-bottom:12px">🏠</div>
+        Click any campaign above or type a search to find Austin apartment seekers
+      </div>
+    </div>
+
+    <!-- Sequences -->
+    <div class="sec-hdr" style="margin-top:8px">
+      <div class="sec-title">✉️ Email Sequences</div>
+      <button class="btn btn-ghost" style="font-size:10px">View All</button>
+    </div>
+    <div class="seq-list">
+      <div class="seq-card">
+        <div class="seq-icon" style="background:rgba(236,72,153,0.1)">💼</div>
+        <div class="seq-info">
+          <div class="seq-name">New Austin Hire — Relocation Outreach</div>
+          <div class="seq-desc">3-email sequence for people who just accepted Austin jobs. Opens with congrats, follows with neighborhood guide, closes with urgency.</div>
+          <div class="seq-stats">
+            <div class="seq-stat">Emails: <span>3</span></div>
+            <div class="seq-stat">Timeline: <span>7 days</span></div>
+            <div class="seq-stat">Target: <span>New hires</span></div>
+          </div>
+        </div>
+        <div class="seq-actions">
+          <button class="btn btn-pink" onclick="previewSeq('new-hire')">Preview</button>
+          <button class="btn btn-ghost" onclick="activateSeq('new-hire')">Activate</button>
+        </div>
+      </div>
+      <div class="seq-card">
+        <div class="seq-icon" style="background:rgba(139,92,246,0.1)">🏢</div>
+        <div class="seq-info">
+          <div class="seq-name">HR Partner Outreach</div>
+          <div class="seq-desc">2-email sequence for HR Directors at Austin employers. Gets Jamie added to their new hire welcome packet as preferred locator.</div>
+          <div class="seq-stats">
+            <div class="seq-stat">Emails: <span>2</span></div>
+            <div class="seq-stat">Timeline: <span>5 days</span></div>
+            <div class="seq-stat">Target: <span>HR Directors</span></div>
+          </div>
+        </div>
+        <div class="seq-actions">
+          <button class="btn btn-pink" onclick="previewSeq('hr')">Preview</button>
+          <button class="btn btn-ghost" onclick="activateSeq('hr')">Activate</button>
+        </div>
+      </div>
+      <div class="seq-card">
+        <div class="seq-icon" style="background:rgba(0,255,136,0.1)">📱</div>
+        <div class="seq-info">
+          <div class="seq-name">Social Inbound — Fast Reply</div>
+          <div class="seq-desc">Single instant email for people asking for Austin apartment help on Reddit or Facebook. Replies within 1 hour while they're still actively searching.</div>
+          <div class="seq-stats">
+            <div class="seq-stat">Emails: <span>1</span></div>
+            <div class="seq-stat">Timeline: <span>Instant</span></div>
+            <div class="seq-stat">Target: <span>Social seekers</span></div>
+          </div>
+        </div>
+        <div class="seq-actions">
+          <button class="btn btn-pink" onclick="previewSeq('social')">Preview</button>
+          <button class="btn btn-ghost" onclick="activateSeq('social')">Activate</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Referral Partners -->
+    <div class="sec-hdr" style="margin-top:8px">
+      <div class="sec-title">🤝 Referral Partner Targets</div>
+      <span style="font-size:10px;color:var(--t2)">Companies to partner with for ongoing referrals</span>
+    </div>
+    <div class="partners-grid">
+      <div class="partner-card">
+        <div class="pc-header">
+          <div class="pc-icon">🏭</div>
+          <div class="pc-type">Major Austin Employers</div>
+          <div class="pc-count">10 targets</div>
+        </div>
+        <div class="pc-companies">
+          <span class="pc-co" onclick="targetCompany('Tesla Gigafactory Austin')">Tesla Gigafactory</span>
+          <span class="pc-co" onclick="targetCompany('Apple Austin Campus')">Apple Austin</span>
+          <span class="pc-co" onclick="targetCompany('Samsung Austin')">Samsung Austin</span>
+          <span class="pc-co" onclick="targetCompany('Dell Technologies Austin')">Dell Technologies</span>
+          <span class="pc-co" onclick="targetCompany('Oracle Austin')">Oracle Austin</span>
+          <span class="pc-co" onclick="targetCompany('Amazon Austin')">Amazon Austin</span>
+          <span class="pc-co" onclick="targetCompany('Google Austin')">Google Austin</span>
+          <span class="pc-co" onclick="targetCompany('Indeed HQ Austin')">Indeed HQ</span>
+          <span class="pc-co" onclick="targetCompany('Meta Austin')">Meta Austin</span>
+          <span class="pc-co" onclick="targetCompany('Salesforce Austin')">Salesforce Austin</span>
+        </div>
+      </div>
+      <div class="partner-card">
+        <div class="pc-header">
+          <div class="pc-icon">✈️</div>
+          <div class="pc-type">Relocation Companies</div>
+          <div class="pc-count">5 targets</div>
+        </div>
+        <div class="pc-companies">
+          <span class="pc-co" onclick="targetCompany('Graebel Relocation')">Graebel</span>
+          <span class="pc-co" onclick="targetCompany('Atlas Van Lines')">Atlas Van Lines</span>
+          <span class="pc-co" onclick="targetCompany('Allied Van Lines')">Allied Van Lines</span>
+          <span class="pc-co" onclick="targetCompany('SIRVA Relocation')">SIRVA</span>
+          <span class="pc-co" onclick="targetCompany('Cartus Relocation')">Cartus</span>
+        </div>
+      </div>
+      <div class="partner-card">
+        <div class="pc-header">
+          <div class="pc-icon">⚖️</div>
+          <div class="pc-type">Austin Family Law Attorneys</div>
+          <div class="pc-count">Divorce clients need housing fast</div>
+        </div>
+        <div class="pc-companies">
+          <span class="pc-co" onclick="runCampaign('attorneys')">🔍 Find Austin Family Law Firms →</span>
+        </div>
+      </div>
+      <div class="partner-card">
+        <div class="pc-header">
+          <div class="pc-icon">🏦</div>
+          <div class="pc-type">Austin Mortgage Brokers</div>
+          <div class="pc-count">Not ready to buy = apartment client</div>
+        </div>
+        <div class="pc-companies">
+          <span class="pc-co" onclick="runCampaign('mortgage')">🔍 Find Austin Mortgage Brokers →</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<!-- Email Preview Modal -->
+<div id="modal" style="display:none;position:fixed;inset:0;background:rgba(5,8,16,.85);backdrop-filter:blur(8px);z-index:500;align-items:center;justify-content:center">
+  <div style="background:#0c1120;border:1px solid rgba(255,255,255,0.12);border-radius:16px;width:580px;max-width:95vw;max-height:85vh;overflow-y:auto">
+    <div style="padding:20px 24px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:space-between">
+      <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700" id="modalTitle">Email Preview</div>
+      <div style="cursor:pointer;color:#5a7099;font-size:18px" onclick="closeModal()">✕</div>
+    </div>
+    <div style="padding:24px" id="modalBody"></div>
+  </div>
+</div>
+
+<script src="leadOS-api-client.js"></script>
+<script>
+
+// ── Sample leads data ─────────────────────────────────────────
+const SAMPLE_LEADS = {
+  'new-hire': [
+    { name:'Alex Rodriguez', title:'Software Engineer → Tesla Gigafactory', signal:'Just accepted Austin job', signal2:'Moving from San Francisco', score:96, color:'#ec4899', urgent:true },
+    { name:'Priya Sharma', title:'Product Manager → Apple Austin', signal:'LinkedIn: "Excited to join Apple!"', signal2:'Moving from Seattle', score:93, color:'#8b5cf6', urgent:true },
+    { name:'Marcus Johnson', title:'UX Designer → Dell Technologies', signal:'New job post 2 days ago', signal2:'Relocating from Dallas', score:88, color:'#3b82f6', urgent:false },
+    { name:'Sarah Kim', title:'Data Analyst → Amazon Austin', signal:'New hire announcement', signal2:'First time in Austin', score:85, color:'#f59e0b', urgent:false },
+  ],
+  'remote-worker': [
+    { name:'Jake Thompson', title:'Remote Engineer → Moving from NYC', signal:'Reddit: "Choosing Austin over Denver"', signal2:'Budget: $2,000-2,500/mo', score:89, color:'#ec4899', urgent:false },
+    { name:'Emma Wilson', title:'Freelance Designer → Moving from LA', signal:'Twitter: "Austin bound this summer"', signal2:'Looking for 1BR downtown', score:84, color:'#00ff88', urgent:false },
+    { name:'Chris Lee', title:'Remote PM → Moving from Chicago', signal:'Facebook Austin group post', signal2:'Has dog, needs pet-friendly', score:82, color:'#8b5cf6', urgent:false },
+    { name:'Nina Patel', title:'Remote Consultant → Moving from SF', signal:'LinkedIn "open to Austin"', signal2:'Budget: $1,800-2,200/mo', score:79, color:'#3b82f6', urgent:false },
+  ],
+  'lease-ending': [
+    { name:'Tyler Brooks', title:'Current Austin Resident', signal:'Reddit: "Lease up May 31, need help"', signal2:'Looking for something bigger', score:95, color:'#ef4444', urgent:true },
+    { name:'Ashley Davis', title:'Current Austin Resident', signal:'Facebook: "My lease ends in 45 days"', signal2:'Budget going up to $1,800', score:91, color:'#f59e0b', urgent:true },
+    { name:'Jordan Martinez', title:'Current Austin Resident', signal:'Nextdoor: apartment recommendations needed', signal2:'2 roommates, need 3BR', score:87, color:'#ec4899', urgent:true },
+  ],
+  'ut-grads': [
+    { name:'Olivia Chen', title:'UT Austin 2026 Graduate → CS', signal:'LinkedIn: "Excited to start at Indeed!"', signal2:'First apartment, needs help', score:83, color:'#00ff88', urgent:false },
+    { name:'Ryan Park', title:'UT Austin 2026 Graduate → Finance', signal:'LinkedIn: new job at Dell Financial', signal2:'Budget: $1,200-1,500', score:80, color:'#3b82f6', urgent:false },
+  ],
+  'hr-partners': [
+    { name:'Jennifer Walsh', title:'HR Director → Tesla Gigafactory Austin', signal:'Manages 200+ new hires/year', signal2:'No preferred apartment locator', score:97, color:'#ec4899', urgent:true },
+    { name:'David Kim', title:'Talent Acquisition → Apple Austin Campus', signal:'Hiring 500+ this year', signal2:'Relocation package standard', score:95, color:'#8b5cf6', urgent:true },
+    { name:'Maria Santos', title:'People Operations → Amazon Austin', signal:'Fast-growing Austin team', signal2:'No apartment locator partner', score:92, color:'#f59e0b', urgent:false },
+  ],
+  'corporate-relocation': [
+    { name:'Robert Chen', title:'Samsung Austin → Relocating 50 engineers', signal:'New Austin R&D center opening', signal2:'Corporate relocation budget', score:98, color:'#ec4899', urgent:true },
+    { name:'Amanda Foster', title:'Oracle Austin → New office expansion', signal:'Austin Business Journal announcement', signal2:'Q3 2026 move date', score:91, color:'#3b82f6', urgent:false },
+  ],
+};
+
+const EMAIL_PREVIEWS = {
+  'new-hire': {
+    title: 'New Austin Hire — 3 Email Sequence',
+    emails: [
+      { subject: 'Congrats on the new role — need help finding a place in Austin?', body: 'Hi {first_name},\n\nI saw you just joined {company} in Austin — congratulations!\n\nMoving to a new city is exciting but finding the right apartment can be overwhelming, especially in Austin\'s fast-moving market.\n\nI\'m Jamie, and I run a free apartment locating service here in Austin. I do all the legwork — searching properties, scheduling tours, negotiating — at zero cost to you (properties pay me directly).\n\nMost of my clients find their perfect place within 1-2 weeks.\n\nWould a quick 10-minute call this week be helpful?\n\n— Jamie\nJamie\'s Apartment Locating | Austin, TX\nFree service. Zero pressure.' },
+      { subject: 'Quick Austin neighborhood guide for you', body: 'Hi {first_name},\n\nJust wanted to share this in case it\'s helpful:\n\n→ Walkability: South Congress, East Austin, Mueller\n→ Space + value: Round Rock, Cedar Park, Pflugerville\n→ Nightlife: Downtown, Rainey Street, 6th Street\n→ Family-friendly: Westlake, Circle C, Steiner Ranch\n\nHappy to help you narrow it down based on your budget. No commitment — just a conversation.\n\n— Jamie' },
+      { subject: 'Last check-in — Austin market moving fast', body: 'Hi {first_name},\n\nLast note from me — Austin\'s rental market moves fast. The best units go within 24-48 hours of listing.\n\nIf you\'re still figuring out housing, I\'m happy to help at no cost.\n\nWelcome to Austin either way! 🤘\n\n— Jamie' },
+    ]
+  },
+  'hr': {
+    title: 'HR Partner — 2 Email Sequence',
+    emails: [
+      { subject: 'Free housing help for your Austin new hires', body: 'Hi {first_name},\n\nI work with several Austin companies to help their new hires find apartments quickly — at zero cost to your company or your employees.\n\nProperties pay me a referral fee when I place a tenant. So your new hires get a dedicated local expert and you get one less onboarding headache.\n\nWould it make sense to add this as a resource in your new hire welcome packet?\n\n— Jamie\nJamie\'s Apartment Locating | Austin, TX' },
+      { subject: 'Quick question about your Austin relocation process', body: 'Hi {first_name},\n\nDo you currently have a preferred apartment locator for Austin new hires?\n\nIf not, I\'d love to be your go-to resource. No cost to {company}, no obligation.\n\n10 minutes this week?\n\n— Jamie' },
+    ]
+  },
+  'social': {
+    title: 'Social Inbound — Instant Reply',
+    emails: [
+      { subject: 'Re: Looking for Austin apartment help', body: 'Hi {first_name},\n\nSaw your post about finding an apartment in Austin — I can help!\n\nI\'m a free apartment locator here. I search properties, schedule tours, and negotiate on your behalf. You pay nothing — properties cover my fee.\n\nA few quick questions:\n• What\'s your budget range?\n• When do you need to move?\n• Any preferred neighborhoods?\n• Pets? Roommates?\n\nReply here and I\'ll send you a personalized list within 24 hours.\n\n— Jamie\nJamie\'s Apartment Locating | Austin, TX 🤘' },
+    ]
+  },
+};
+
+// ── Functions ─────────────────────────────────────────────────
+var totalLeads = 0;
+var totalSeq = 0;
+
+function showLoading() { document.getElementById('loadingBar').classList.add('active'); }
+function hideLoading() { document.getElementById('loadingBar').classList.remove('active'); }
+
+function toast(msg) {
+  var tc = document.getElementById('toast');
+  var t = document.createElement('div');
+  t.className = 'toast-item';
+  t.textContent = msg;
+  tc.appendChild(t);
+  setTimeout(function() { t.classList.add('show'); }, 10);
+  setTimeout(function() { t.classList.remove('show'); setTimeout(function() { t.remove(); }, 300); }, 3000);
+}
+
+function setSearch(q) {
+  document.getElementById('searchInput').value = q;
+  runSearch();
+}
+
+function runSearch() {
+  var q = document.getElementById('searchInput').value.trim();
+  if (!q) return;
+  showLoading();
+  document.getElementById('resultsGrid').innerHTML = '<div style="grid-column:span 2;text-align:center;padding:32px;color:#5a7099;font-size:11px">🔍 Searching Austin market...</div>';
+
+  setTimeout(function() {
+    hideLoading();
+    var leads = generateLeadsFromQuery(q);
+    renderLeads(leads, q);
+  }, 1800);
+}
+
+function runCampaign(type) {
+  showLoading();
+  toast('🚀 Launching ' + type + ' campaign...');
+  document.getElementById('resultsGrid').innerHTML = '<div style="grid-column:span 2;text-align:center;padding:32px;color:#5a7099;font-size:11px">⚡ Running AI agents...</div>';
+
+  setTimeout(function() {
+    hideLoading();
+    var leads = SAMPLE_LEADS[type] || SAMPLE_LEADS['new-hire'];
+    renderLeads(leads, type);
+    totalLeads += leads.length;
+    document.getElementById('leadsFound').textContent = totalLeads;
+    document.getElementById('weeklyLeads').textContent = totalLeads;
+  }, 2000);
+}
+
+function generateLeadsFromQuery(q) {
+  return [
+    { name:'Alex Rivera', title:'Moving to Austin for new tech role', signal:'LinkedIn: New job announcement', signal2:'Needs housing by next month', score:91, color:'#ec4899', urgent:true },
+    { name:'Sam Chen', title:'Remote worker relocating to Austin', signal:'Reddit: "Choosing Austin over Denver"', signal2:'Budget $1,800-2,200', score:86, color:'#8b5cf6', urgent:false },
+    { name:'Jordan Lee', title:'UT Austin grad starting first job', signal:'LinkedIn: "Excited to start at Dell!"', signal2:'First apartment hunt', score:82, color:'#3b82f6', urgent:false },
+    { name:'Morgan Davis', title:'Corporate relocation to Austin', signal:'Company announced Austin expansion', signal2:'Relocation package included', score:94, color:'#00ff88', urgent:true },
+  ];
+}
+
+function renderLeads(leads, context) {
+  var grid = document.getElementById('resultsGrid');
+  document.getElementById('resultsCount').textContent = leads.length + ' leads found';
+
+  if (!leads || leads.length === 0) {
+    grid.innerHTML = '<div style="grid-column:span 2;text-align:center;padding:32px;color:#5a7099;font-size:11px">No leads found. Try a different search.</div>';
+    return;
+  }
+
+  grid.innerHTML = leads.map(function(l) {
+    var initials = l.name.split(' ').map(function(w) { return w[0]; }).join('');
+    return '<div class="lead-card' + (l.urgent ? ' hot' : '') + '">' +
+      '<div class="lc-top">' +
+        '<div class="lc-av" style="background:' + l.color + '22;color:' + l.color + '">' + initials + '</div>' +
+        '<div class="lc-info"><div class="lc-name">' + l.name + (l.urgent ? ' 🔥' : '') + '</div><div class="lc-title">' + l.title + '</div></div>' +
+        '<div class="lc-score">' + l.score + '</div>' +
+      '</div>' +
+      '<div class="lc-signals">' +
+        '<span class="signal' + (l.urgent ? ' hot' : '') + '">' + l.signal + '</span>' +
+        '<span class="signal warm">' + l.signal2 + '</span>' +
+      '</div>' +
+      '<div class="lc-actions">' +
+        '<button class="btn btn-pink" style="font-size:10px;padding:6px 12px" onclick="addToSequence(\'' + l.name + '\')">+ Sequence</button>' +
+        '<button class="btn btn-ghost" style="font-size:10px;padding:6px 12px" onclick="generateEmail(\'' + l.name + '\', \'' + l.title + '\')">✉️ Email</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function addToSequence(name) {
+  totalSeq++;
+  document.getElementById('seqActive').textContent = totalSeq;
+  toast('✅ ' + name + ' added to sequence');
+}
+
+function generateEmail(name, title) {
+  var firstName = name.split(' ')[0];
+  document.getElementById('modalTitle').textContent = '✉️ AI Generated Email for ' + name;
+  document.getElementById('modalBody').innerHTML =
+    '<div style="background:#111827;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:16px;margin-bottom:14px">' +
+    '<div style="font-size:9px;color:#5a7099;text-transform:uppercase;letter-spacing:2px;margin-bottom:8px">Subject</div>' +
+    '<div style="font-size:12px">Congrats on the new role — need help finding a place in Austin?</div>' +
+    '</div>' +
+    '<div style="background:#111827;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:16px;margin-bottom:16px">' +
+    '<div style="font-size:9px;color:#5a7099;text-transform:uppercase;letter-spacing:2px;margin-bottom:8px">Email Body</div>' +
+    '<div style="font-size:11px;line-height:1.8;color:#eef4ff">Hi ' + firstName + ',<br><br>' +
+    'I saw you\'re making a move to Austin — congratulations!<br><br>' +
+    'Finding the right apartment here can be overwhelming, especially if you\'re coming from out of state. Austin\'s market moves fast — the best units go in 24-48 hours.<br><br>' +
+    'I\'m Jamie, and I run a free apartment locating service in Austin. I handle the search, tours, and negotiation — at zero cost to you. Properties pay me directly.<br><br>' +
+    'Most clients find their perfect place within 1-2 weeks.<br><br>' +
+    'Would a quick 10-minute call be helpful this week?<br><br>' +
+    '— Jamie<br>Jamie\'s Apartment Locating | Austin, TX 🤘<br>Free service. Zero pressure.</div>' +
+    '</div>' +
+    '<div style="display:flex;gap:8px">' +
+    '<button class="btn btn-pink" onclick="closeModal();toast(\'✅ Email queued for ' + name + '\')">Send Email</button>' +
+    '<button class="btn btn-ghost" onclick="closeModal()">Close</button>' +
+    '</div>';
+  document.getElementById('modal').style.display = 'flex';
+}
+
+function previewSeq(type) {
+  var seq = EMAIL_PREVIEWS[type];
+  if (!seq) return;
+  document.getElementById('modalTitle').textContent = seq.title;
+  document.getElementById('modalBody').innerHTML = seq.emails.map(function(e, i) {
+    return '<div style="margin-bottom:16px">' +
+      '<div style="font-size:9px;color:#ec4899;text-transform:uppercase;letter-spacing:2px;margin-bottom:6px">Email ' + (i+1) + ' of ' + seq.emails.length + '</div>' +
+      '<div style="background:#111827;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:14px">' +
+      '<div style="font-size:9px;color:#5a7099;margin-bottom:4px">Subject:</div>' +
+      '<div style="font-size:11px;font-weight:600;margin-bottom:10px">' + e.subject + '</div>' +
+      '<div style="font-size:10px;color:#5a7099;margin-bottom:4px">Body:</div>' +
+      '<div style="font-size:10px;line-height:1.8;color:#eef4ff;white-space:pre-line">' + e.body + '</div>' +
+      '</div></div>';
+  }).join('') + '<button class="btn btn-pink" onclick="closeModal()">Close Preview</button>';
+  document.getElementById('modal').style.display = 'flex';
+}
+
+function activateSeq(type) {
+  toast('✅ Sequence activated — will run automatically');
+}
+
+function targetCompany(company) {
+  document.getElementById('searchInput').value = 'HR director at ' + company + ' Austin relocation new hires';
+  runSearch();
+  toast('🎯 Targeting ' + company);
+}
+
+function launchFullCampaign() {
+  toast('🚀 Launching all 6 campaigns simultaneously...');
+  showLoading();
+  setTimeout(function() {
+    hideLoading();
+    totalLeads = 47;
+    totalSeq = 20;
+    document.getElementById('leadsFound').textContent = totalLeads;
+    document.getElementById('seqActive').textContent = totalSeq;
+    document.getElementById('weeklyLeads').textContent = totalLeads;
+    document.getElementById('openRate').textContent = '38%';
+    document.getElementById('monthlyRev').textContent = '$1,500';
+    runCampaign('new-hire');
+    toast('✅ All campaigns live — 47 leads found');
+  }, 2500);
+}
+
+function closeModal() {
+  document.getElementById('modal').style.display = 'none';
+}
+
+function handleLogout() {
+  try { sessionStorage.clear(); } catch(e) {}
+  window.location.href = 'leadOS-login.html';
+}
+
+// Close modal on backdrop click
+document.getElementById('modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+</script>
+</body>
+</html>
