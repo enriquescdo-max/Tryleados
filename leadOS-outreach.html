@@ -167,13 +167,15 @@ body::before{content:'';position:fixed;inset:0;background-image:radial-gradient(
     <div class="nav-section">Core</div>
     <a href="leadOS-dashboard.html" class="nav-item" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:12px;margin-bottom:2px;transition:all .2s;"><span class="icon">⬡</span> Command Center</a>
     <a href="leadOS-lead-discovery.html" class="nav-item" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:12px;margin-bottom:2px;transition:all .2s;"><span class="icon">🔍</span> Lead Discovery</a>
-    <div class="nav-item" style="opacity:0.45;cursor:not-allowed;" title="Coming soon" onclick="showComingSoon('AI Agents')"><span class="icon">🤖</span> AI Agents</div>
-    <div class="nav-item" style="opacity:0.45;cursor:not-allowed;" title="Coming soon" onclick="showComingSoon('Pipeline')"><span class="icon">📊</span> Pipeline</div>
+    <div class="nav-item" style="cursor:pointer;" onclick="window.location.href='leadOS-dashboard.html'"><span class="icon">🤖</span> AI Agents</div>
+    <div class="nav-item" style="cursor:pointer;" onclick="window.location.href='leadOS-analytics.html'"><span class="icon">📊</span> Pipeline</div>
     <a href="leadOS-outreach.html" class="nav-item active" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:12px;margin-bottom:2px;transition:all .2s;"><span class="icon">✉️</span> Outreach <span class="badge">12</span></a>
     <div class="nav-section">Intelligence</div>
-    <div class="nav-item" style="opacity:0.45;cursor:not-allowed;" title="Coming soon" onclick="showComingSoon('Lead Scoring')"><span class="icon">🧠</span> Lead Scoring</div>
-    <div class="nav-item" style="opacity:0.45;cursor:not-allowed;" title="Coming soon" onclick="showComingSoon('Web Crawler')"><span class="icon">🕸️</span> Web Crawler</div>
+    <div class="nav-item" style="cursor:pointer;" onclick="window.location.href='leadOS-icp-builder.html'"><span class="icon">🧠</span> Lead Scoring</div>
+    <div class="nav-item" style="cursor:pointer;" onclick="window.location.href='leadOS-lead-discovery.html'"><span class="icon">🕸️</span> Web Crawler</div>
     <a href="leadOS-icp-builder.html" class="nav-item" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:12px;margin-bottom:2px;transition:all .2s;"><span class="icon">🎯</span> ICP Builder</a>
+        <div class="nav-section">Content Engine</div>
+    <a href="leadOS-contentOS.html" class="nav-item" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:12px;margin-bottom:2px;transition:all .2s;"><span class="icon">🎬</span> ContentOS <span class="badge green" style="background:var(--accent);color:#000;font-size:9px;padding:2px 6px;border-radius:20px;font-weight:600;margin-left:auto">NEW</span></a>
     <div class="nav-section">System</div>
     <a href="leadOS-crm-integrations.html" class="nav-item" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:12px;margin-bottom:2px;transition:all .2s;"><span class="icon">🔗</span> Integrations</a>
   </nav>
@@ -430,15 +432,8 @@ function insertVar(v){
   el.focus();
 }
 
-function aiGenerate(){
-  const btn=document.querySelector('.ai-generate-btn');
-  btn.textContent='⏳ Generating with Claude AI...';
-  setTimeout(()=>{
-    btn.textContent='✅ Email generated! Review above';
-    document.getElementById('emailBody').value=`Hi {{first_name}},\n\nSaw that {{company}} recently {{signal}} — that's a strong signal you're scaling fast.\n\nThe challenge most {{title}}s face at this stage is that outbound pipeline doesn't keep up with growth. Your team ends up chasing unqualified leads while the good ones slip through.\n\nLeadOS fixes that: AI agents discover, score, and route leads automatically — 24/7, no manual work.\n\nWould love to show you how [Similar Company in {{industry}}] used it to 3x qualified pipeline. 15 minutes this week?\n\n[Your Name]`;
-    setTimeout(()=>{btn.textContent='🤖 AI Generate Email from Lead Context';},3000);
-  },1800);
-}
+// aiGenerate() is defined below in the wired API block (real POST to /outreach/generate)
+function aiGenerate(){ window._aiGenerateReal && window._aiGenerateReal(); }
 
 function saveStep(){
   const btn=event.target;
@@ -498,29 +493,32 @@ function newSeq(){
     card.classList.add('active-seq');
   }
 
-  // ── AI Generate email copy ────────────────────────────────────
-  window.aiGenerate = async function() {
+  // ── AI Generate email — real POST to /outreach/generate ──────
+  async function _aiGenerateImpl() {
     const btn = document.querySelector('.ai-generate-btn');
     if (!btn) return;
-    btn.textContent = '⏳ Generating with Claude AI...';
+    btn.textContent = '⏳ Generating with AI...';
     btn.disabled = true;
     try {
-      // Use the first lead in mock data as context
-      const { leads } = await LeadOSAPI.getLeads({ limit: 1 });
-      const leadId = leads?.[0]?.id || 'lead_001';
+      // Get most recent lead for context
+      const { leads } = await LeadOSAPI.getLeads({ limit: 1 }).catch(() => ({ leads: [] }));
+      const lead = leads?.[0] || {};
       const activeStep = document.querySelector('.step-tab.active');
-      const stepNum = activeStep ? parseInt(activeStep.querySelector('.step-num').textContent) : 1;
-      const { subject, body } = await LeadOSAPI.generateEmailCopy(leadId, stepNum);
-      document.getElementById('emailSubject').value = subject;
-      document.getElementById('emailBody').value = body;
-      LeadOSUI.toast('Email generated by Claude AI', 'success');
+      const stepNum = activeStep ? parseInt(activeStep.querySelector('.step-num')?.textContent || '1') : 1;
+      // POST to /outreach/generate with full lead context
+      const { subject, body } = await LeadOSAPI.generateEmailCopy(lead.id || null, stepNum);
+      document.getElementById('emailSubject').value = subject || '';
+      document.getElementById('emailBody').value = body || '';
+      LeadOSUI.toast('✅ Email generated by AI — review and personalise', 'success');
     } catch(e) {
       LeadOSUI.toast('Generation failed: ' + e.message, 'error');
     } finally {
       btn.textContent = '🤖 AI Generate Email from Lead Context';
       btn.disabled = false;
     }
-  };
+  }
+  window.aiGenerate = _aiGenerateImpl;
+  window._aiGenerateReal = _aiGenerateImpl;
 
   // ── New sequence ──────────────────────────────────────────────
   window.newSeq = async function() {

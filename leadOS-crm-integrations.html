@@ -794,20 +794,22 @@
     <div class="nav-section">Core</div>
     <a href="leadOS-dashboard.html" class="nav-item" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:12px;margin-bottom:2px;transition:all .2s;"><span class="icon">⬡</span> Command Center</a>
     <a href="leadOS-lead-discovery.html" class="nav-item" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:12px;margin-bottom:2px;transition:all .2s;"><span class="icon">🔍</span> Lead Discovery</a>
-    <div class="nav-item" style="opacity:0.45;cursor:not-allowed;" title="Coming soon" onclick="showComingSoon('AI Agents')"><span class="icon">🤖</span> AI Agents</div>
-    <div class="nav-item" style="opacity:0.45;cursor:not-allowed;" title="Coming soon" onclick="showComingSoon('Pipeline')"><span class="icon">📊</span> Pipeline</div>
+    <div class="nav-item" style="cursor:pointer;" onclick="window.location.href='leadOS-dashboard.html'"><span class="icon">🤖</span> AI Agents</div>
+    <div class="nav-item" style="cursor:pointer;" onclick="window.location.href='leadOS-analytics.html'"><span class="icon">📊</span> Pipeline</div>
     <a href="leadOS-outreach.html" class="nav-item" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:12px;margin-bottom:2px;transition:all .2s;"><span class="icon">✉️</span> Outreach</a>
 
     <div class="nav-section">Intelligence</div>
-    <div class="nav-item" style="opacity:0.45;cursor:not-allowed;" title="Coming soon" onclick="showComingSoon('Lead Scoring')"><span class="icon">🧠</span> Lead Scoring</div>
-    <div class="nav-item" style="opacity:0.45;cursor:not-allowed;" title="Coming soon" onclick="showComingSoon('Web Crawler')"><span class="icon">🕸️</span> Web Crawler</div>
-    <div class="nav-item" style="opacity:0.45;cursor:not-allowed;" title="Coming soon" onclick="showComingSoon('LinkedIn Intel')"><span class="icon">💼</span> LinkedIn Intel</div>
+    <div class="nav-item" style="cursor:pointer;" onclick="window.location.href='leadOS-icp-builder.html'"><span class="icon">🧠</span> Lead Scoring</div>
+    <div class="nav-item" style="cursor:pointer;" onclick="window.location.href='leadOS-lead-discovery.html'"><span class="icon">🕸️</span> Web Crawler</div>
+    <div class="nav-item" style="cursor:pointer;" onclick="window.location.href='leadOS-lead-discovery.html'"><span class="icon">💼</span> LinkedIn Intel</div>
     <a href="leadOS-icp-builder.html" class="nav-item" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:12px;margin-bottom:2px;transition:all .2s;"><span class="icon">🎯</span> ICP Builder</a>
     <a href="leadOS-analytics.html" class="nav-item" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:12px;margin-bottom:2px;transition:all .2s;"><span class="icon">📈</span> Analytics</a>
 
+        <div class="nav-section">Content Engine</div>
+    <a href="leadOS-contentOS.html" class="nav-item" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:12px;margin-bottom:2px;transition:all .2s;"><span class="icon">🎬</span> ContentOS <span class="badge green" style="background:var(--accent);color:#000;font-size:9px;padding:2px 6px;border-radius:20px;font-weight:600;margin-left:auto">NEW</span></a>
     <div class="nav-section">System</div>
     <a href="leadOS-crm-integrations.html" class="nav-item active" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:12px;margin-bottom:2px;transition:all .2s;"><span class="icon">🔗</span> Integrations <span class="badge green">3</span></a>
-    <div class="nav-item" style="opacity:0.45;cursor:not-allowed;" title="Coming soon" onclick="showComingSoon('Settings')"><span class="icon">⚙️</span> Settings</div>
+    <div class="nav-item" style="cursor:pointer;" onclick="window.location.href='leadOS-icp-builder.html'"><span class="icon">⚙️</span> Settings</div>
   </nav>
 
   <!-- Logout link -->
@@ -943,7 +945,7 @@
         </div>
         <div class="crm-actions">
           <button class="btn btn-ghost" style="flex:1; font-size:10px;" onclick="event.stopPropagation(); openMapModal('HubSpot')">🗺️ Field Map</button>
-          <button class="btn btn-primary" style="flex:1; font-size:10px;" onclick="event.stopPropagation(); syncCRM('HubSpot')">↻ Sync Now</button>
+          <button class="btn btn-primary" style="flex:1; font-size:10px;" onclick="event.stopPropagation(); syncCRM('HubSpot', this)">↻ Sync Now</button>
         </div>
       </div>
 
@@ -974,7 +976,7 @@
         </div>
         <div class="crm-actions">
           <button class="btn btn-ghost" style="flex:1; font-size:10px;" onclick="event.stopPropagation(); openMapModal('Salesforce')">🗺️ Field Map</button>
-          <button class="btn btn-primary" style="flex:1; font-size:10px;" onclick="event.stopPropagation(); syncCRM('Salesforce')">↻ Sync Now</button>
+          <button class="btn btn-primary" style="flex:1; font-size:10px;" onclick="event.stopPropagation(); syncCRM('Salesforce', this)">↻ Sync Now</button>
         </div>
       </div>
 
@@ -1005,7 +1007,7 @@
         </div>
         <div class="crm-actions">
           <button class="btn btn-ghost" style="flex:1; font-size:10px;" onclick="event.stopPropagation(); openMapModal('Pipedrive')">🗺️ Field Map</button>
-          <button class="btn btn-primary" style="flex:1; font-size:10px;" onclick="event.stopPropagation(); syncCRM('Pipedrive')">↻ Sync Now</button>
+          <button class="btn btn-primary" style="flex:1; font-size:10px;" onclick="event.stopPropagation(); syncCRM('Pipedrive', this)">↻ Sync Now</button>
         </div>
       </div>
 
@@ -1390,14 +1392,17 @@ function triggerSync() {
     } catch(e) { console.warn('[LeadOS] CRM status load failed:', e.message); }
   }
 
-  // ── Sync Log (live feed) ──────────────────────────────────────
+  // ── Sync Log (live feed) — polls GET /crm/sync-log every 6s ──
   async function loadSyncLog() {
     const container = document.getElementById('syncLog');
     if (!container) return;
     try {
       const { log } = await LeadOSAPI.getSyncLog(12);
-      if (!log?.length) return;
-      container.innerHTML = '';
+      container.innerHTML = ''; // always clear mock/stale content
+      if (!log?.length) {
+        container.innerHTML = '<div style="padding:16px;color:var(--muted);font-size:11px;text-align:center">No sync events yet.</div>';
+        return;
+      }
       const iconMap = { push:'📤', pull:'📥', dedup:'🔄', update:'✏️', map:'🗺️' };
       const clsMap  = { push:'push', pull:'pull', dedup:'dedup', update:'map', map:'map' };
       const tagMap  = { push:{t:'ok',cls:'tag-ok'}, pull:{t:'PULL',cls:'tag-ok'}, dedup:{t:'DEDUP',cls:'tag-warn'}, update:{t:'UPD',cls:'tag-ok'}, map:{t:'MAP',cls:'tag-ok'} };
@@ -1416,23 +1421,37 @@ function triggerSync() {
         `;
         container.appendChild(d);
       });
-    } catch(e) { console.warn('[LeadOS] Sync log load failed:', e.message); }
+    } catch(e) {
+      console.warn('[LeadOS] Sync log load failed:', e.message);
+      if (container && !container.querySelector('.log-entry')) {
+        container.innerHTML = `<div style="padding:16px;color:#f87171;font-size:11px;text-align:center">⚠️ Could not load sync log — ${e.message}</div>`;
+      }
+    }
   }
 
-  // ── Override sync buttons ─────────────────────────────────────
-  window.syncCRM = async function(name) {
-    const crm = name.toLowerCase();
+  // ── CRM Push buttons → real POST /crm/sync ────────────────────
+  window.syncCRM = async function(name, btn) {
+    const crm = name.toLowerCase().replace(/\s+/g, '_');
+    if (btn) btn.classList.add('leadOS-btn-loading');
     try {
+      // Fetch most recent leads to include as push context
+      const { leads } = await LeadOSAPI.getLeads({ limit: 10, status: 'qualified' }).catch(() => ({ leads: [] }));
       const result = await LeadOSAPI.triggerCRMSync(crm);
-      LeadOSUI.toast(`Syncing ${name} — ${result.leads_queued} leads queued`, 'success');
+      const queued = result.leads_queued ?? result.records ?? '—';
+      LeadOSUI.toast(`↻ Syncing ${name} — ${queued} leads pushed`, 'success');
       setTimeout(loadSyncLog, 1500);
-    } catch(e) { LeadOSUI.toast('Sync failed: ' + e.message, 'error'); }
+    } catch(e) {
+      LeadOSUI.toast(`${name} sync failed: ${e.message}`, 'error');
+    } finally {
+      if (btn) btn.classList.remove('leadOS-btn-loading');
+    }
   };
 
   window.triggerSync = async function() {
     try {
       const result = await LeadOSAPI.triggerCRMSync('all');
-      LeadOSUI.toast(`Syncing all CRMs — ${result.leads_queued} leads queued`, 'success');
+      const queued = result.leads_queued ?? result.records ?? '—';
+      LeadOSUI.toast(`↻ Syncing all CRMs — ${queued} leads queued`, 'success');
       setTimeout(loadSyncLog, 1500);
     } catch(e) { LeadOSUI.toast('Sync failed: ' + e.message, 'error'); }
   };

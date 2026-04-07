@@ -189,6 +189,26 @@ const LeadOSAPI = {
     return apiFetch(`/leads/${leadId}`, { method: 'DELETE' });
   },
 
+  // ── Lead Search ───────────────────────────────────────────────────────
+
+  async searchLeads(query, limit = 20) {
+    if (LeadOSConfig.MOCK_MODE) {
+      await delay(LeadOSConfig.MOCK_DELAY_MS);
+      const q = query.toLowerCase();
+      const filtered = MOCK.leads.filter(l =>
+        l.name.toLowerCase().includes(q) ||
+        (l.company || '').toLowerCase().includes(q) ||
+        (l.title || '').toLowerCase().includes(q)
+      );
+      const results = filtered.length ? filtered : MOCK.leads;
+      return { leads: results.slice(0, limit), total: results.length, query };
+    }
+    return apiFetch('/leads/search', {
+      method: 'POST',
+      body: JSON.stringify({ query, limit }),
+    });
+  },
+
   // ── Campaigns ─────────────────────────────────────────────────────────
 
   async runCampaign({ prompt, sources = ['crawler', 'linkedin'], max_leads = 50 }) {
@@ -241,7 +261,7 @@ const LeadOSAPI = {
       MOCK.sync_log.unshift(entry);
       return { status: 'sync_queued', crm, leads_queued: entry.records_affected };
     }
-    return apiFetch('/sync/crm', { method: 'POST', body: JSON.stringify({ crm }) });
+    return apiFetch('/crm/sync', { method: 'POST', body: JSON.stringify({ crm }) });
   },
 
   async connectCRM(crm, credentials) {

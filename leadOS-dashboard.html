@@ -707,20 +707,22 @@
     <div class="nav-section">Core</div>
     <a href="leadOS-dashboard.html" class="nav-item active" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:12px;margin-bottom:2px;transition:all .2s;"><span class="icon">⬡</span> Command Center</a>
     <a href="leadOS-lead-discovery.html" class="nav-item" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:12px;margin-bottom:2px;transition:all .2s;"><span class="icon">🔍</span> Lead Discovery <span class="badge green">NEW</span></a>
-    <div class="nav-item" style="opacity:0.45;cursor:not-allowed;" title="Coming soon" onclick="showComingSoon('AI Agents')"><span class="icon">🤖</span> AI Agents <span class="badge">3</span></div>
-    <div class="nav-item" style="opacity:0.45;cursor:not-allowed;" title="Coming soon" onclick="showComingSoon('Pipeline')"><span class="icon">📊</span> Pipeline</div>
+    <div class="nav-item" style="cursor:pointer;" onclick="window.location.href='leadOS-dashboard.html'"><span class="icon">🤖</span> AI Agents <span class="badge">3</span></div>
+    <div class="nav-item" style="cursor:pointer;" onclick="window.location.href='leadOS-analytics.html'"><span class="icon">📊</span> Pipeline</div>
     <a href="leadOS-outreach.html" class="nav-item" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:12px;margin-bottom:2px;transition:all .2s;"><span class="icon">✉️</span> Outreach <span class="badge blue">12</span></a>
 
     <div class="nav-section">Intelligence</div>
-    <div class="nav-item" style="opacity:0.45;cursor:not-allowed;" title="Coming soon" onclick="showComingSoon('Lead Scoring')"><span class="icon">🧠</span> Lead Scoring</div>
-    <div class="nav-item" style="opacity:0.45;cursor:not-allowed;" title="Coming soon" onclick="showComingSoon('Web Crawler')"><span class="icon">🕸️</span> Web Crawler</div>
-    <div class="nav-item" style="opacity:0.45;cursor:not-allowed;" title="Coming soon" onclick="showComingSoon('LinkedIn Intel')"><span class="icon">💼</span> LinkedIn Intel</div>
+    <div class="nav-item" style="cursor:pointer;" onclick="window.location.href='leadOS-icp-builder.html'"><span class="icon">🧠</span> Lead Scoring</div>
+    <div class="nav-item" style="cursor:pointer;" onclick="window.location.href='leadOS-lead-discovery.html'"><span class="icon">🕸️</span> Web Crawler</div>
+    <div class="nav-item" style="cursor:pointer;" onclick="window.location.href='leadOS-lead-discovery.html'"><span class="icon">💼</span> LinkedIn Intel</div>
     <a href="leadOS-icp-builder.html" class="nav-item" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:12px;margin-bottom:2px;transition:all .2s;"><span class="icon">🎯</span> ICP Builder</a>
     <a href="leadOS-analytics.html" class="nav-item" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:12px;margin-bottom:2px;transition:all .2s;"><span class="icon">📈</span> Analytics</a>
 
+        <div class="nav-section">Content Engine</div>
+    <a href="leadOS-contentOS.html" class="nav-item" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:12px;margin-bottom:2px;transition:all .2s;"><span class="icon">🎬</span> ContentOS <span class="badge green" style="background:var(--accent);color:#000;font-size:9px;padding:2px 6px;border-radius:20px;font-weight:600;margin-left:auto">NEW</span></a>
     <div class="nav-section">System</div>
     <a href="leadOS-crm-integrations.html" class="nav-item" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:12px;margin-bottom:2px;transition:all .2s;"><span class="icon">🔗</span> Integrations</a>
-    <div class="nav-item" style="opacity:0.45;cursor:not-allowed;" title="Coming soon" onclick="showComingSoon('Settings')"><span class="icon">⚙️</span> Settings</div>
+    <div class="nav-item" style="cursor:pointer;" onclick="window.location.href='leadOS-icp-builder.html'"><span class="icon">⚙️</span> Settings</div>
   </nav>
 
   <div class="agent-status">
@@ -1135,29 +1137,39 @@ document.getElementById('agentPrompt').addEventListener('keydown', e => {
     }
   }
 
-  // ── Live Agent Feed ───────────────────────────────────────────
+  // ── Live Agent Feed — polls GET /events every 5s ─────────────
   async function loadFeed() {
     const container = document.getElementById('feedContainer');
     if (!container) return;
     try {
       const { events } = await LeadOSAPI.getEvents(20);
-      if (!events?.length) return;
-      container.innerHTML = '';
+      container.innerHTML = ''; // always clear mock/stale content
+      if (!events?.length) {
+        container.innerHTML = '<div style="padding:20px;color:var(--muted);font-size:11px;text-align:center">No recent events from agents.</div>';
+        return;
+      }
       const iconMap = { crawler:'🕷️', linkedin:'💼', enricher:'🔬', qualifier:'🧠', email_verifier:'📧', signal_detector:'⚡', crm_sync:'🔗', outreach:'✉️' };
       const clsMap  = { crawler:'scrape', linkedin:'linkedin', enricher:'enrich', qualifier:'qualify', email_verifier:'email', signal_detector:'scrape', crm_sync:'email', outreach:'email' };
-      events.forEach(e => {
+      events.forEach(ev => {
         const div = document.createElement('div');
         div.className = 'feed-item';
+        const lvlColor = ev.level === 'error' ? '#ff3366' : ev.level === 'warning' ? '#ffaa00' : 'var(--accent)';
         div.innerHTML = `
-          <div class="feed-icon ${clsMap[e.agent]||'scrape'}">${iconMap[e.agent]||'🤖'}</div>
+          <div class="feed-icon ${clsMap[ev.agent]||'scrape'}">${iconMap[ev.agent]||'🤖'}</div>
           <div class="feed-body">
-            <div class="feed-action">${e.message.replace(/(<strong>|<\/strong>)/g,'')}</div>
-            <div class="feed-meta">${e.agent} · ${LeadOSUI.relativeTime(e.timestamp)}</div>
+            <div class="feed-action" style="color:${lvlColor}">${ev.message}</div>
+            <div class="feed-meta">${ev.agent||'agent'} · ${LeadOSUI.relativeTime(ev.timestamp)}</div>
           </div>
         `;
         container.appendChild(div);
       });
-    } catch(e) { console.warn('[LeadOS] Feed load failed:', e.message); }
+    } catch(e) {
+      console.warn('[LeadOS] Feed load failed:', e.message);
+      // Only show error on first load (container still has mock placeholder content)
+      if (!container.querySelector('.feed-item-live')) {
+        container.innerHTML = `<div style="padding:20px;color:#f87171;font-size:11px;text-align:center">⚠️ Could not reach agent feed — ${e.message}</div>`;
+      }
+    }
   }
 
   // ── Lead Table ────────────────────────────────────────────────
