@@ -189,27 +189,20 @@ const LeadOSAPI = {
     return apiFetch(`/leads/${leadId}`, { method: 'DELETE' });
   },
 
-  // ── Lead Search ───────────────────────────────────────────────────────
+  // ── Campaigns ─────────────────────────────────────────────────────────
 
   async searchLeads(query, limit = 20) {
-    if (LeadOSConfig.MOCK_MODE) {
-      await delay(LeadOSConfig.MOCK_DELAY_MS);
-      const q = query.toLowerCase();
-      const filtered = MOCK.leads.filter(l =>
-        l.name.toLowerCase().includes(q) ||
-        (l.company || '').toLowerCase().includes(q) ||
-        (l.title || '').toLowerCase().includes(q)
-      );
-      const results = filtered.length ? filtered : MOCK.leads;
-      return { leads: results.slice(0, limit), total: results.length, query };
-    }
-    return apiFetch('/leads/search', {
-      method: 'POST',
-      body: JSON.stringify({ query, limit }),
-    });
+    // Launch campaign with query then fetch results
+    try {
+      await apiFetch('/campaigns', {
+        method: 'POST',
+        body: JSON.stringify({ prompt: query, sources: ['crawler', 'linkedin'], max_leads: limit })
+      });
+    } catch(e) {}
+    // Wait briefly then return leads
+    await new Promise(r => setTimeout(r, 2000));
+    return apiFetch(`/leads?limit=${limit}`);
   },
-
-  // ── Campaigns ─────────────────────────────────────────────────────────
 
   async runCampaign({ prompt, sources = ['crawler', 'linkedin'], max_leads = 50 }) {
     if (LeadOSConfig.MOCK_MODE) {
@@ -261,7 +254,7 @@ const LeadOSAPI = {
       MOCK.sync_log.unshift(entry);
       return { status: 'sync_queued', crm, leads_queued: entry.records_affected };
     }
-    return apiFetch('/crm/sync', { method: 'POST', body: JSON.stringify({ crm }) });
+    return apiFetch('/sync/crm', { method: 'POST', body: JSON.stringify({ crm }) });
   },
 
   async connectCRM(crm, credentials) {
