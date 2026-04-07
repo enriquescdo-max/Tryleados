@@ -129,13 +129,8 @@ class LinkedInAgent(BaseAgent):
         log.info(f"LinkedIn search: {query}")
         await asyncio.sleep(0.8)  # Simulate scrape delay
 
-        # Mock results
-        mock_profiles = [
-            {"first_name": "Priya", "last_name": "Patel", "title": "CMO",
-             "company_name": "Notion", "linkedin_url": "https://linkedin.com/in/priya-patel"},
-            {"first_name": "James", "last_name": "Rodriguez", "title": "CEO",
-             "company_name": "Vercel", "linkedin_url": "https://linkedin.com/in/james-rodriguez"},
-        ]
+        # Real search - return empty results (integrate real LinkedIn/Apollo API)
+        mock_profiles = []
 
         from uuid import uuid4
         saved_ids = []
