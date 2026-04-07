@@ -126,28 +126,95 @@ class LinkedInAgent(BaseAgent):
             return await self._search_linkedin(search_query, task)
 
     async def _search_linkedin(self, query: str, task: AgentTask) -> Dict[str, Any]:
-        log.info(f"LinkedIn search: {query}")
-        await asyncio.sleep(0.8)  # Simulate scrape delay
-
-        # Real search - return empty results (integrate real LinkedIn/Apollo API)
-        mock_profiles = []
-
-        from uuid import uuid4
+        log.info(f"Lead search via Apify Google Search: {query}")
+        
+        apify_key = os.getenv("APIFY_API_KEY")
+        
+        if not apify_key:
+            log.warning("APIFY_API_KEY not set — returning empty results")
+            return {"leads_found": 0, "lead_ids": []}
+        
+        try:
+            import aiohttp
+            # Use Apify Google Search Scraper (works on free plan)
+            actor_url = f"https://api.apify.com/v2/acts/apidojo~google-search-scraper/run-sync-get-dataset-items?token={apify_key}&timeout=60"
+            
+            # Build Google search query to find real estate professionals
+            google_query = f'site:linkedin.com/in "{query}" realtor OR "real estate agent" OR broker'
+            
+            payload = {
+                "searchTerms": [google_query],
+                "maxPagesPerQuery": 1,
+                "maxItems": 15,
+                "countryCode": "us",
+                "languageCode": "en",
+            }
+            
+            async with aiohttp.ClientSession() as session:
+                async with session.post(actor_url, json=payload, timeout=aiohttp.ClientTimeout(total=90)) as resp:
+                    if resp.status == 200:
+                        results = await resp.json()
+                    else:
+                        log.warning(f"Apify returned {resp.status}: {await resp.text()}")
+                        results = []
+        except Exception as e:
+            log.warning(f"Apify search failed: {e}")
+            results = []
+        
         saved_ids = []
-        for profile in mock_profiles:
-            lead = Lead(
-                first_name=profile["first_name"],
-                last_name=profile["last_name"],
-                title=profile["title"],
-                company_name=profile["company_name"],
-                linkedin_url=profile["linkedin_url"],
-                source=LeadSource.LINKEDIN,
-            )
-            self.save_lead(lead)
-            saved_ids.append(lead.id)
-
-        log.info(f"  Found {len(mock_profiles)} profiles on LinkedIn")
-        return {"leads_found": len(mock_profiles), "lead_ids": saved_ids}
+        for item in results[:15]:
+            try:
+                import re
+                title = item.get("title", "")
+                url = item.get("url", "")
+                description = item.get("description", "")
+                
+                # Skip non-profile results
+                if not title or len(title) < 5:
+                    continue
+                
+                # Extract name from title (LinkedIn format: "Name - Title at Company")
+                name_part = title.split(" - ")[0].strip()
+                name_part = re.sub(r'\s*\|.*$', '', name_part).strip()
+                
+                # Extract title/company from description or title
+                title_part = ""
+                company_part = ""
+                if " - " in title:
+                    rest = title.split(" - ", 1)[1]
+                    if " at " in rest:
+                        title_part = rest.split(" at ")[0].strip()
+                        company_part = rest.split(" at ")[1].strip()
+                    else:
+                        title_part = rest.strip()
+                
+                if not title_part and description:
+                    title_part = description[:80]
+                
+                # Split name
+                parts = name_part.split(" ", 1)
+                first = parts[0] if parts else "Unknown"
+                last = parts[1] if len(parts) > 1 else ""
+                
+                if first == "Unknown" or len(first) < 2:
+                    continue
+                
+                lead = Lead(
+                    first_name=first,
+                    last_name=last,
+                    title=title_part or "Real Estate Professional",
+                    company_name=company_part or "",
+                    linkedin_url=url if "linkedin.com" in url else "",
+                    source=LeadSource.LINKEDIN,
+                )
+                self.save_lead(lead)
+                saved_ids.append(lead.id)
+                log.info(f"  Saved lead: {first} {last} - {title_part}")
+            except Exception as e:
+                log.warning(f"Failed to parse result: {e}")
+        
+        log.info(f"  Found {len(saved_ids)} real leads via Google Search")
+        return {"leads_found": len(saved_ids), "lead_ids": saved_ids}
 
     async def _enrich_lead_linkedin(self, lead_id: str) -> Dict[str, Any]:
         lead = self.get_lead(lead_id)
