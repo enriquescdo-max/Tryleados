@@ -285,83 +285,67 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
     sigs.innerHTML = (l.intent_signals||[]).map(s=>`<div style="display:flex;align-items:center;gap:8px"><span style="color:var(--a4)">⚡</span><span>${s}</span></div>`).join('') || '<span style="color:var(--muted)">No signals detected</span>';
   }
 
-  // ── Shared card renderer ──────────────────────────────────────────────
-  function renderLeads(leads, total, labelHtml) {
-    const list = document.getElementById('leadsList');
-    document.getElementById('resultsCount').innerHTML = labelHtml ||
-      `Showing <strong>${total}</strong> leads &middot; <strong style="color:var(--accent)">${leads.filter(l=>l.ai_score>=70).length}</strong> above ICP threshold`;
-    list.innerHTML = '';
-    if (!leads.length) {
-      list.innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted);font-size:12px">No leads found. Try a different search.</div>';
-      return;
-    }
-    leads.forEach((l, i) => {
-      const score = l.ai_score || 0;
-      const sc    = LeadOSUI.scoreColor(score);
-      const initials = (l.name||'?').split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
-      const ci    = i % bgColors.length;
-      const card  = document.createElement('div');
-      card.className = 'lead-card' + (i===0 ? ' selected' : '');
-      card.style.animation = `fadeUp .3s ease ${i*0.05}s both`;
-      card.onclick = () => {
-        document.querySelectorAll('.lead-card').forEach(c=>c.classList.remove('selected'));
-        card.classList.add('selected');
-        populateDetail(l);
-      };
-      card.innerHTML = `
-        <div class="lead-avatar" style="background:${bgColors[ci]};color:${tcColors[ci]}">${initials}</div>
-        <div>
-          <div class="lead-name-row">${l.name||'Unknown'}<span style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;font-weight:400"> @ ${l.company||'—'}</span></div>
-          <div class="lead-title-row">${l.title||'—'}</div>
-          <div class="lead-signals">
-            ${(l.intent_signals||[]).slice(0,2).map(s=>`<span class="signal-pill">${s}</span>`).join('')}
-            ${l.email_verified?'<span class="signal-pill green">✓ Verified</span>':''}
-          </div>
-        </div>
-        <div style="text-align:center;flex-shrink:0">
-          <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:${sc}">${score||'—'}</div>
-          <div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">AI Score</div>
-        </div>
-        <div class="lead-actions">
-          <button class="btn btn-primary" style="font-size:9px;padding:5px 10px" onclick="event.stopPropagation();addToSeq(this)">+ Sequence</button>
-          <button class="btn btn-ghost"   style="font-size:9px;padding:5px 10px" onclick="event.stopPropagation();pushCRM(this)">CRM Push</button>
-        </div>`;
-      list.appendChild(card);
-      if (i===0) populateDetail(l);
-    });
-  }
-
   async function loadLeads() {
     const list = document.getElementById('leadsList');
     LeadOSUI.skeleton(list, 5);
     try {
       const { leads, total } = await LeadOSAPI.getLeads({ limit: 20 });
-      renderLeads(leads, total);
+      document.getElementById('resultsCount').innerHTML =
+        `Showing <strong>${total}</strong> leads &middot; <strong style="color:var(--accent)">${leads.filter(l=>l.ai_score>=70).length}</strong> above ICP threshold`;
+      list.innerHTML = '';
+      leads.forEach((l, i) => {
+        const score = l.ai_score || 0;
+        const sc = LeadOSUI.scoreColor(score);
+        const initials = l.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
+        const ci = i % bgColors.length;
+        const card = document.createElement('div');
+        card.className = 'lead-card' + (i===0?' selected':'');
+        card.style.animation = `fadeUp .3s ease ${i*0.05}s both`;
+        card.onclick = () => {
+          document.querySelectorAll('.lead-card').forEach(c=>c.classList.remove('selected'));
+          card.classList.add('selected');
+          populateDetail(l);
+        };
+        card.innerHTML = `
+          <div class="lead-avatar" style="background:${bgColors[ci]};color:${tcColors[ci]}">${initials}</div>
+          <div>
+            <div class="lead-name-row">${l.name}<span style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;font-weight:400"> @ ${l.company}</span></div>
+            <div class="lead-title-row">${l.title}</div>
+            <div class="lead-signals">
+              ${(l.intent_signals||[]).slice(0,2).map(s=>`<span class="signal-pill">${s}</span>`).join('')}
+              ${l.email_verified?'<span class="signal-pill green">✓ Verified</span>':''}
+            </div>
+          </div>
+          <div style="text-align:center;flex-shrink:0">
+            <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:${sc}">${score||'—'}</div>
+            <div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">AI Score</div>
+          </div>
+          <div class="lead-actions">
+            <button class="btn btn-primary" style="font-size:9px;padding:5px 10px" onclick="event.stopPropagation();addToSeq(this)">+ Sequence</button>
+            <button class="btn btn-ghost"   style="font-size:9px;padding:5px 10px" onclick="event.stopPropagation();pushCRM(this)">CRM Push</button>
+          </div>`;
+        list.appendChild(card);
+        if (i===0) populateDetail(l);
+      });
     } catch(e) {
       LeadOSUI.error(list, 'Could not load leads — ' + e.message);
     }
   }
 
-  // ── runSearch: real POST to /leads/search ─────────────────────────────
   window.runSearch = async function() {
     const input = document.getElementById('aiSearch');
-    const query = input?.value?.trim();
-    if (!query) return;
+    const prompt = input?.value?.trim();
+    if (!prompt) return;
     const btn = document.querySelector('.search-hero .btn-primary');
-    const list = document.getElementById('leadsList');
     if (btn) { btn.textContent = '⏳ Searching...'; btn.disabled = true; }
-    LeadOSUI.skeleton(list, 5);
     try {
-      const data = await LeadOSAPI.searchLeads(query, 20);
-      const leads = data.leads || data.results || [];
-      const total = data.total ?? leads.length;
-      renderLeads(
-        leads, total,
-        `<strong>${total}</strong> results for "<strong style="color:var(--accent)">${query}</strong>"`
-      );
-      LeadOSUI.toast(`Found ${total} lead${total!==1?'s':''} — showing top ${Math.min(total,20)}`, 'success');
+      await LeadOSAPI.runCampaign({ prompt, sources:['crawler','linkedin'], max_leads:50 });
+      LeadOSUI.toast('AI agents searching — results incoming...', 'success');
+      // Poll for results 3 times
+      setTimeout(loadLeads, 3000);
+      setTimeout(loadLeads, 6000);
+      setTimeout(loadLeads, 10000);
     } catch(e) {
-      LeadOSUI.error(list, 'Search failed — ' + e.message);
       LeadOSUI.toast('Search failed: ' + e.message, 'error');
     } finally {
       if (btn) { btn.textContent = '⚡ Search'; btn.disabled = false; }
