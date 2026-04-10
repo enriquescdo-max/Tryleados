@@ -1,0 +1,23 @@
+[build]
+builder = "nixpacks"
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 30
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
+
+# ── Cron jobs (P16-P18) ───────────────────────────────────────────────────────
+# NOTE: Railway cron services are separate deployments.
+# These are documented here for reference.
+# To activate: Railway Dashboard → New Service → Cron for each one below.
+
+# P16 — 6am CST morning brief (= 11am UTC)
+# schedule: "0 11 * * *"
+# command:  "python -c \"import asyncio, httpx; asyncio.run(httpx.AsyncClient().post('http://localhost:$PORT/heartbeat/morning-brief', json={'email': 'enrique@weinsure.com', 'user_name': 'Enrique'}))\""
+
+# P17 — 30-min lead checker
+# schedule: "*/30 * * * *"
+# command:  "python -c \"import asyncio, httpx; asyncio.run(httpx.AsyncClient().post('http://localhost:$PORT/heartbeat/trigger'))\""
+
+# P18 — Voice trigger (60s after new lead) handled in orchestrator pipeline
