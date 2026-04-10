@@ -178,7 +178,17 @@ async def start_api_server(orchestrator, host="0.0.0.0", port=8000):
 
     @app.get("/")
     async def root():
-        return {"name": "LeadOS", "version": "2.1", "status": "running", "docs": "/docs"}
+        return {"name": "LeadOS", "version": "3.0", "status": "running", "docs": "/docs"}
+
+    @app.get("/health")
+    async def health():
+        return {
+            "status": "ok",
+            "version": "3.0",
+            "agents": len(orchestrator.agents),
+            "leads_in_memory": len(orchestrator.leads_db),
+            "mock_mode": False,
+        }
 
     @app.get("/status")
     async def get_status():
