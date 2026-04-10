@@ -605,12 +605,26 @@ Keep responses concise (3-5 sentences max) and action-oriented."""
 
     @app.post("/chat/message")
     async def chat_message(req: ChatMessageRequest):
-        """Support chatbot powered by Claude API with conversation history."""
+        """Support chatbot powered by Claude API with MetaClaw memory injection."""
         if not orchestrator.config.anthropic_api_key:
             return {"reply": "Chat is not available right now — ANTHROPIC_API_KEY not configured. Email support@tryleados.com for help."}
 
         try:
             import anthropic, asyncio
+            from core.metaclaw import load_user_memory, build_user_context, inject_memory
+
+            # P10: Load user memory and inject into system prompt
+            user_memory = await load_user_memory(req.email)
+            leads_summary = {
+                "total": len(orchestrator.leads_db),
+                "qualified": sum(1 for l in orchestrator.leads_db.values() if l.is_qualified),
+                "avg_score": round(
+                    sum(l.ai_score for l in orchestrator.leads_db.values() if l.ai_score)
+                    / max(1, sum(1 for l in orchestrator.leads_db.values() if l.ai_score)), 1
+                ),
+            }
+            user_ctx = build_user_context(user_memory, leads_summary)
+            system   = inject_memory(SUPPORT_SYSTEM_PROMPT, user_ctx)
 
             # Build messages array from history + new message
             messages = []
@@ -628,7 +642,7 @@ Keep responses concise (3-5 sentences max) and action-oriented."""
                 client.messages.create,
                 model="claude-sonnet-4-20250514",
                 max_tokens=512,
-                system=SUPPORT_SYSTEM_PROMPT,
+                system=system,
                 messages=messages,
             )
             reply = response.content[0].text.strip()
@@ -809,6 +823,154 @@ Keep responses concise (3-5 sentences max) and action-oriented."""
         import asyncio
         background_tasks.add_task(_send)
         return {"status": "queued", "email": req.email}
+
+    # ══════════════════════════════════════════════════════════════════════
+    # MORNING BRIEF (P9)
+    # ══════════════════════════════════════════════════════════════════════
+
+    class MorningBriefRequest(BaseModel):
+        email: str
+        user_name: str = "there"
+
+    @app.post("/heartbeat/morning-brief")
+    async def send_morning_brief(req: MorningBriefRequest, background_tasks: BackgroundTasks):
+        """Generate and send the 6am morning brief via Claude + SendGrid."""
+        async def _run():
+            import anthropic, asyncio as aio
+            from core.metaclaw import load_user_memory, build_user_context, inject_memory
+
+            sendgrid_key = orchestrator.config.sendgrid_api_key
+            if not sendgrid_key or not orchestrator.config.anthropic_api_key:
+                log.warning("Morning brief skipped — missing SENDGRID_API_KEY or ANTHROPIC_API_KEY")
+                return
+
+            # Get top qualified leads
+            leads = sorted(
+                [l for l in orchestrator.leads_db.values() if l.ai_score],
+                key=lambda l: l.ai_score or 0, reverse=True
+            )[:5]
+
+            user_memory = await load_user_memory(req.email)
+
+            # Build brief content with Claude
+            leads_text = "\n".join([
+                f"- {l.first_name} {l.last_name} ({l.company_name or 'unknown company'}): score {l.ai_score}/100. {l.ai_score_reasoning or ''}"
+                for l in leads
+            ]) or "No leads found yet — agents are still running."
+
+            user_ctx = build_user_context(user_memory, {
+                "total": len(orchestrator.leads_db),
+                "qualified": sum(1 for l in orchestrator.leads_db.values() if l.is_qualified),
+                "avg_score": 0,
+            })
+
+            brief_prompt = f"""{user_ctx}
+
+You are writing a personalized morning brief email for a P&C insurance agent using LeadOS.
+Keep it concise, data-first, and action-oriented. Write in plain text (no markdown).
+
+Top leads today:
+{leads_text}
+
+Write a brief (4-6 sentences) morning summary covering:
+1. How many leads were found overnight and the top score
+2. The single highest-priority lead and why
+3. One recommended action for today
+4. An encouraging, professional sign-off
+
+Do not use bullet points. Write in paragraph form. Address the agent as "{req.user_name}"."""
+
+            try:
+                client = anthropic.Anthropic(api_key=orchestrator.config.anthropic_api_key)
+                response = await aio.to_thread(
+                    client.messages.create,
+                    model="claude-sonnet-4-20250514",
+                    max_tokens=400,
+                    messages=[{"role": "user", "content": brief_prompt}],
+                )
+                brief_text = response.content[0].text.strip()
+            except Exception as e:
+                log.warning(f"Claude brief gen failed: {e}")
+                brief_text = f"Good morning, {req.user_name}! Your LeadOS agents ran overnight and found {len(leads)} qualified leads. Log in to review your top opportunities and take action today."
+
+            # Build HTML email
+            leads_html = "".join([
+                f"""<tr>
+                  <td style='padding:10px 14px;font-family:monospace;font-size:12px;color:#f0f4ff'>
+                    {l.first_name} {l.last_name}</td>
+                  <td style='padding:10px 14px;font-size:11px;color:#5a7099'>
+                    {l.company_name or '—'}</td>
+                  <td style='padding:10px 14px;font-weight:700;color:{"#00ff88" if (l.ai_score or 0) >= 75 else "#ffaa00"}'>
+                    {l.ai_score}/100</td>
+                  <td style='padding:10px 14px;font-size:10px;color:#5a7099'>
+                    {"✅ QUALIFIED" if l.is_qualified else "📋 NURTURE"}</td>
+                </tr>"""
+                for l in leads
+            ]) or "<tr><td colspan='4' style='padding:12px 14px;color:#5a7099;font-size:11px'>No leads yet — agents are running now.</td></tr>"
+
+            date_str = datetime.utcnow().strftime("%A, %B %-d")
+            html_body = f"""<html><body style="background:#050810;color:#f0f4ff;font-family:'DM Mono',monospace;padding:32px;max-width:600px;margin:auto">
+  <div style="margin-bottom:20px;display:flex;align-items:center;gap:10px">
+    <span style="background:#00ff88;color:#000;font-weight:900;font-family:sans-serif;font-size:16px;padding:6px 12px;border-radius:8px">L</span>
+    <span style="font-family:sans-serif;font-size:18px;font-weight:900">LeadOS <span style="color:#5a7099;font-size:12px;font-weight:400">Morning Brief</span></span>
+  </div>
+  <div style="font-size:11px;color:#5a7099;margin-bottom:20px">☀️ &nbsp;{date_str} · 6:00 AM CST</div>
+  <p style="font-size:13px;line-height:1.8;color:#d0d8f0;margin-bottom:24px;white-space:pre-line">{brief_text}</p>
+  <table style="width:100%;border-collapse:collapse;background:#0c1120;border-radius:10px;overflow:hidden;margin-bottom:24px">
+    <thead><tr style="background:#111827">
+      <th style="padding:10px 14px;text-align:left;font-size:9px;color:#5a7099;letter-spacing:1px;text-transform:uppercase">Name</th>
+      <th style="padding:10px 14px;text-align:left;font-size:9px;color:#5a7099;letter-spacing:1px;text-transform:uppercase">Company</th>
+      <th style="padding:10px 14px;text-align:left;font-size:9px;color:#5a7099;letter-spacing:1px;text-transform:uppercase">Score</th>
+      <th style="padding:10px 14px;text-align:left;font-size:9px;color:#5a7099;letter-spacing:1px;text-transform:uppercase">Status</th>
+    </tr></thead>
+    <tbody>{leads_html}</tbody>
+  </table>
+  <a href="https://tryleados.com/leadOS-dashboard.html"
+     style="display:inline-block;background:#00ff88;color:#000;font-weight:700;padding:12px 24px;border-radius:8px;text-decoration:none;font-family:sans-serif;font-size:13px">
+    View Full Dashboard →
+  </a>
+  <p style="color:#2d3f5a;font-size:10px;margin-top:28px">
+    LeadOS · Austin, TX · <a href="https://tryleados.com" style="color:#2d3f5a">tryleados.com</a>
+    · <a href="https://tryleados.com/unsubscribe" style="color:#2d3f5a">Unsubscribe</a>
+  </p>
+</body></html>"""
+
+            try:
+                import httpx
+                resp = httpx.post(
+                    "https://api.sendgrid.com/v3/mail/send",
+                    headers={"Authorization": f"Bearer {sendgrid_key}", "Content-Type": "application/json"},
+                    json={
+                        "personalizations": [{"to": [{"email": req.email}]}],
+                        "from": {"email": orchestrator.config.outreach_from_email, "name": "LeadOS"},
+                        "subject": f"☀️ Your LeadOS Brief — {len(leads)} leads ready · {date_str}",
+                        "content": [{"type": "text/html", "value": html_body}],
+                    },
+                    timeout=10,
+                )
+                if resp.status_code == 202:
+                    log.info(f"Morning brief sent to {req.email}")
+                    orchestrator._log_event("heartbeat", f"Morning brief sent to {req.email}", "success")
+                else:
+                    log.warning(f"SendGrid error {resp.status_code}: {resp.text[:200]}")
+            except Exception as e:
+                log.warning(f"Morning brief send failed: {e}")
+
+        background_tasks.add_task(_run)
+        return {"status": "queued", "email": req.email}
+
+    @app.post("/heartbeat/trigger")
+    async def manual_heartbeat(background_tasks: BackgroundTasks):
+        """Manual trigger for testing heartbeat actions."""
+        leads = list(orchestrator.leads_db.values())
+        qualified = [l for l in leads if l.is_qualified]
+        orchestrator._log_event("heartbeat", f"Manual trigger — {len(qualified)} qualified leads", "info")
+        return {
+            "status": "triggered",
+            "total_leads": len(leads),
+            "qualified_leads": len(qualified),
+            "timestamp": datetime.utcnow().isoformat(),
+        }
 
     # ── Start ─────────────────────────────────────────────────────────────
 
