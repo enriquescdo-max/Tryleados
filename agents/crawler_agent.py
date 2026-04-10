@@ -127,10 +127,16 @@ class CrawlerAgent(BaseAgent):
         # Extract emails from page
         emails = re.findall(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", html)
         domain = urlparse(url).netloc.replace("www.", "")
+        _IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".bmp", ".ico", ".tiff"}
 
         # Extract names near emails (heuristic)
         for email in set(emails[:10]):
+            # Skip generic/system addresses
             if any(skip in email for skip in ["noreply", "support", "info", "admin", "hello"]):
+                continue
+            # Skip image filenames matched by regex (e.g. agent_425@2x.jpg)
+            tld = "." + email.rsplit(".", 1)[-1].lower() if "." in email else ""
+            if tld in _IMAGE_EXTS:
                 continue
 
             leads.append({
