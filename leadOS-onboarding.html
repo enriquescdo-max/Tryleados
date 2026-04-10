@@ -444,16 +444,37 @@ function selectIndustry(id, el) {
 }
 
 // ── Step 1: Checkout ────────────────────────────────────────────────────────
-function startCheckout() {
-  // Pass industry + return URL so we can resume onboarding after payment
-  const returnUrl = encodeURIComponent(location.origin + location.pathname + '?step=2&industry=' + selectedIndustry);
-  const link = STRIPE_PAYMENT_LINK + '?client_reference_id=onboarding&success_url=' + returnUrl;
-  // If Stripe link not yet configured, skip to step 2 for demo
-  if (STRIPE_PAYMENT_LINK.includes('REPLACE')) {
-    goStep(2);
-  } else {
-    window.location.href = link;
-  }
+async function startCheckout() {
+  const btn = document.querySelector('#step1 .btn-primary');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Starting checkout...';
+
+  const successUrl = location.origin + location.pathname
+    + '?step=2&industry=' + selectedIndustry
+    + (userEmail ? '&email=' + encodeURIComponent(userEmail) : '');
+
+  try {
+    const res = await fetch(`${API}/billing/checkout`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        tier: 'lone_wolf',
+        email: userEmail,
+        success_url: successUrl,
+        cancel_url: location.origin,
+      })
+    });
+    const data = await res.json();
+    if (data.url && !data.url.includes('demo=true')) {
+      window.location.href = data.url;
+      return;
+    }
+  } catch(e) { /* fall through */ }
+
+  // Demo / no Stripe key — skip straight to step 2
+  btn.disabled = false;
+  btn.textContent = 'Start for $49/month \u2192';
+  goStep(2);
 }
 
 // ── Step 2: Save ICP ────────────────────────────────────────────────────────

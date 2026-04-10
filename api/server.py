@@ -431,6 +431,148 @@ Return ONLY valid JSON with keys "subject" and "body". No markdown, no explanati
             return fallbacks.get(req.step, fallbacks[1])
 
     # ══════════════════════════════════════════════════════════════════════
+    # STRIPE BILLING
+    # ══════════════════════════════════════════════════════════════════════
+
+    STRIPE_SECRET_KEY      = os.getenv("STRIPE_SECRET_KEY", "")
+    STRIPE_WEBHOOK_SECRET  = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+
+    # Price IDs — create these in Stripe Dashboard then set as env vars
+    PRICE_LONE_WOLF   = os.getenv("STRIPE_PRICE_LONE_WOLF",  "price_lone_wolf_monthly")
+    PRICE_TEAM        = os.getenv("STRIPE_PRICE_TEAM",       "price_team_monthly")
+    PRICE_WHITE_LABEL = os.getenv("STRIPE_PRICE_WHITE_LABEL","price_white_label_monthly")
+    PRICE_TRANSFER    = os.getenv("STRIPE_PRICE_TRANSFER",   "price_voice_transfer")
+
+    # In-memory subscription store (email → tier)
+    _subscriptions: Dict[str, Dict] = {}
+
+    class CheckoutRequest(BaseModel):
+        tier: str = "lone_wolf"   # lone_wolf | team | white_label
+        email: str = ""
+        success_url: str = "https://tryleados.com/leadOS-onboarding.html?step=2"
+        cancel_url: str  = "https://tryleados.com"
+
+    class TransferBillRequest(BaseModel):
+        email: str
+        lead_name: str = ""
+        lead_score: float = 0
+
+    @app.post("/billing/checkout")
+    async def create_checkout(req: CheckoutRequest):
+        """Create a Stripe Checkout session and return the URL."""
+        if not STRIPE_SECRET_KEY or STRIPE_SECRET_KEY.startswith("sk_test_REPLACE"):
+            # Return a demo URL if Stripe not yet configured
+            return {
+                "url": req.success_url + "&demo=true",
+                "session_id": "demo_session",
+                "note": "Set STRIPE_SECRET_KEY in Railway to enable real billing",
+            }
+        try:
+            import stripe
+            stripe.api_key = STRIPE_SECRET_KEY
+            price_map = {
+                "lone_wolf":   PRICE_LONE_WOLF,
+                "team":        PRICE_TEAM,
+                "white_label": PRICE_WHITE_LABEL,
+            }
+            price_id = price_map.get(req.tier, PRICE_LONE_WOLF)
+            session = stripe.checkout.Session.create(
+                payment_method_types=["card"],
+                line_items=[{"price": price_id, "quantity": 1}],
+                mode="subscription",
+                customer_email=req.email or None,
+                success_url=req.success_url + "?session_id={CHECKOUT_SESSION_ID}",
+                cancel_url=req.cancel_url,
+                metadata={"tier": req.tier, "email": req.email},
+            )
+            return {"url": session.url, "session_id": session.id}
+        except Exception as e:
+            log.error(f"Stripe checkout failed: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.post("/billing/webhook")
+    async def stripe_webhook(request):
+        """Handle Stripe webhook events."""
+        from fastapi import Request
+        payload  = await request.body()
+        sig      = request.headers.get("stripe-signature", "")
+
+        if not STRIPE_SECRET_KEY:
+            return {"status": "skipped_no_key"}
+
+        try:
+            import stripe
+            stripe.api_key = STRIPE_SECRET_KEY
+            if STRIPE_WEBHOOK_SECRET:
+                event = stripe.Webhook.construct_event(payload, sig, STRIPE_WEBHOOK_SECRET)
+            else:
+                import json
+                event = json.loads(payload)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Webhook error: {e}")
+
+        etype = event.get("type", "")
+        data  = event.get("data", {}).get("object", {})
+        email = (data.get("customer_email") or
+                 data.get("metadata", {}).get("email") or "")
+
+        if etype == "checkout.session.completed":
+            tier = data.get("metadata", {}).get("tier", "lone_wolf")
+            _subscriptions[email] = {
+                "tier": tier, "status": "active",
+                "stripe_customer_id": data.get("customer"),
+                "stripe_subscription_id": data.get("subscription"),
+                "activated_at": datetime.utcnow().isoformat(),
+            }
+            orchestrator._log_event("billing", f"Subscription activated: {tier} for {email}", "success")
+            log.info(f"✅ Checkout complete — {tier} for {email}")
+
+        elif etype == "customer.subscription.deleted":
+            if email in _subscriptions:
+                _subscriptions[email]["status"] = "cancelled"
+            orchestrator._log_event("billing", f"Subscription cancelled for {email}", "info")
+
+        elif etype == "invoice.payment_failed":
+            orchestrator._log_event("billing", f"Payment failed for {email}", "error")
+
+        elif etype == "invoice.paid":
+            if email in _subscriptions:
+                _subscriptions[email]["last_paid"] = datetime.utcnow().isoformat()
+            orchestrator._log_event("billing", f"Invoice paid for {email}", "success")
+
+        return {"received": True, "type": etype}
+
+    @app.post("/billing/transfer")
+    async def bill_transfer(req: TransferBillRequest):
+        """Bill $25 per qualified voice transfer via Stripe usage record."""
+        if not STRIPE_SECRET_KEY or not req.email:
+            return {"status": "skipped", "reason": "Stripe not configured or no email"}
+
+        sub = _subscriptions.get(req.email, {})
+        if not sub.get("stripe_subscription_id"):
+            return {"status": "skipped", "reason": "No active subscription found"}
+
+        try:
+            import stripe
+            stripe.api_key = STRIPE_SECRET_KEY
+            # Create a one-time invoice item for $25
+            stripe.InvoiceItem.create(
+                customer=sub["stripe_customer_id"],
+                amount=2500,  # $25.00 in cents
+                currency="usd",
+                description=f"Qualified lead transfer — {req.lead_name} (score: {req.lead_score})",
+            )
+            orchestrator._log_event("billing", f"Transfer billed $25 for {req.email} — {req.lead_name}", "success")
+            return {"status": "billed", "amount": 25.00, "email": req.email}
+        except Exception as e:
+            log.error(f"Transfer billing failed: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.get("/billing/subscription")
+    async def get_subscription(email: str):
+        return _subscriptions.get(email, {"status": "none", "tier": None})
+
+    # ══════════════════════════════════════════════════════════════════════
     # ONBOARDING
     # ══════════════════════════════════════════════════════════════════════
 
