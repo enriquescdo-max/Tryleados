@@ -25,7 +25,7 @@ log = logging.getLogger("LeadOS.API")
 
 async def start_api_server(orchestrator, host="0.0.0.0", port=8000):
     try:
-        from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, Header
+        from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, Header, Request
         from fastapi.middleware.cors import CORSMiddleware
         from pydantic import BaseModel
         import uvicorn
@@ -501,9 +501,8 @@ Return ONLY valid JSON with keys "subject" and "body". No markdown, no explanati
             raise HTTPException(status_code=500, detail=str(e))
 
     @app.post("/billing/webhook")
-    async def stripe_webhook(request):
+    async def stripe_webhook(request: Request):
         """Handle Stripe webhook events."""
-        from fastapi import Request
         payload  = await request.body()
         sig      = request.headers.get("stripe-signature", "")
 
@@ -907,8 +906,7 @@ Keep responses concise (3-5 sentences max) and action-oriented."""
         raise HTTPException(status_code=503, detail="Vapi call initiation failed")
 
     @app.post("/webhook/vapi/call-started")
-    async def vapi_call_started(request):
-        from fastapi import Request
+    async def vapi_call_started(request: Request):
         payload = await request.json()
         call_id = payload.get("callId") or payload.get("id", "")
         lead_id = (payload.get("metadata") or {}).get("lead_id", "")
@@ -916,8 +914,7 @@ Keep responses concise (3-5 sentences max) and action-oriented."""
         return {"received": True}
 
     @app.post("/webhook/vapi/call-ended")
-    async def vapi_call_ended(request, background_tasks: BackgroundTasks):
-        from fastapi import Request
+    async def vapi_call_ended(request: Request, background_tasks: BackgroundTasks):
         payload = await request.json()
         call   = payload.get("call", payload)
         call_id= call.get("id", "")
@@ -968,8 +965,7 @@ Keep responses concise (3-5 sentences max) and action-oriented."""
         return {"received": True, "score": score, "outcome": outcome}
 
     @app.post("/webhook/vapi/transfer-requested")
-    async def vapi_transfer_requested(request):
-        from fastapi import Request
+    async def vapi_transfer_requested(request: Request):
         payload = await request.json()
         call_id = payload.get("callId", "")
         orchestrator._log_event("voice", f"Warm transfer requested: {call_id}", "success")
