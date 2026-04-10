@@ -430,6 +430,162 @@ Return ONLY valid JSON with keys "subject" and "body". No markdown, no explanati
             }
             return fallbacks.get(req.step, fallbacks[1])
 
+    # ══════════════════════════════════════════════════════════════════════
+    # ONBOARDING
+    # ══════════════════════════════════════════════════════════════════════
+
+    class OnboardingICPRequest(BaseModel):
+        industry: str = "insurance"
+        target_states: List[str] = []
+        client_types: List[str] = []
+        lead_priorities: List[str] = []
+        age_range: str = ""
+        email: str = ""
+
+    class VoiceConfigRequest(BaseModel):
+        enabled: bool = False
+        phone_number: str = ""
+        email: str = ""
+
+    class WelcomeBriefRequest(BaseModel):
+        email: str
+        leads: List[Dict] = []
+
+    # In-memory voice config store (per email)
+    _voice_configs: Dict[str, Dict] = {}
+
+    @app.post("/onboarding/icp")
+    async def onboarding_icp(req: OnboardingICPRequest):
+        """Save onboarding ICP and kick off first campaign."""
+        from core.models import ICPProfile
+
+        industry_map = {
+            "insurance":   ["P&C Insurance", "Home Insurance", "Auto Insurance"],
+            "mortgage":    ["Mortgage", "Home Loans"],
+            "real_estate": ["Real Estate", "Property"],
+            "solar":       ["Solar", "Renewable Energy"],
+        }
+        industries = industry_map.get(req.industry, [req.industry.replace("_", " ").title()])
+
+        icp = ICPProfile(
+            name=f"{req.industry.replace('_',' ').title()} ICP",
+            target_industries=industries,
+            target_geographies=req.target_states,
+            positive_signals=req.lead_priorities,
+        )
+        orchestrator.update_icp(icp)
+
+        # Persist to Supabase user_memory if available
+        try:
+            from db import supabase_client
+            if supabase_client.is_ready() and req.email:
+                import asyncio
+                await asyncio.to_thread(
+                    supabase_client.client.table("user_memory").upsert({
+                        "industry": req.industry,
+                        "icp_description": f"{', '.join(industries)} — {', '.join(req.target_states)}",
+                        "target_states": req.target_states,
+                        "memory_notes": f"client_types={req.client_types}, priorities={req.lead_priorities}",
+                    }).execute
+                )
+        except Exception as e:
+            log.warning(f"Supabase user_memory write failed: {e}")
+
+        orchestrator._log_event("onboarding", f"ICP saved: {icp.name}", "success")
+        return {"status": "icp_saved", "icp_name": icp.name, "states": req.target_states}
+
+    @app.post("/voice/configure")
+    async def configure_voice(req: VoiceConfigRequest):
+        """Save voice agent config for a user."""
+        key = req.email or "default"
+        _voice_configs[key] = {
+            "enabled": req.enabled,
+            "phone_number": req.phone_number,
+            "updated_at": datetime.utcnow().isoformat(),
+        }
+        orchestrator._log_event(
+            "voice",
+            f"Voice {'enabled' if req.enabled else 'disabled'} for {key}",
+            "success"
+        )
+        return {"status": "voice_configured", "enabled": req.enabled}
+
+    @app.get("/voice/config")
+    async def get_voice_config(email: str = "default"):
+        return _voice_configs.get(email, {"enabled": False, "phone_number": ""})
+
+    @app.post("/heartbeat/send-welcome-brief")
+    async def send_welcome_brief(req: WelcomeBriefRequest, background_tasks: BackgroundTasks):
+        """Send welcome email with lead preview via SendGrid."""
+        if not req.email:
+            return {"status": "skipped", "reason": "no email provided"}
+
+        async def _send():
+            sendgrid_key = orchestrator.config.sendgrid_api_key
+            if not sendgrid_key:
+                log.warning("SENDGRID_API_KEY not set — skipping welcome email")
+                return
+
+            leads_html = "".join([
+                f"<tr><td style='padding:8px 12px;font-family:monospace;font-size:13px'>{l.get('name','—')}</td>"
+                f"<td style='padding:8px 12px;color:#5a7099;font-size:12px'>{l.get('title','')}</td>"
+                f"<td style='padding:8px 12px;font-weight:700;color:#00ff88'>{l.get('score',0)}</td></tr>"
+                for l in req.leads[:3]
+            ]) or "<tr><td colspan='3' style='padding:8px 12px;color:#5a7099'>Leads are generating now — check your dashboard.</td></tr>"
+
+            html = f"""
+<html><body style="background:#050810;color:#f0f4ff;font-family:'DM Mono',monospace;padding:32px;max-width:560px;margin:auto">
+  <div style="margin-bottom:24px">
+    <span style="background:#00ff88;color:#000;font-weight:900;font-family:sans-serif;font-size:16px;padding:6px 12px;border-radius:8px">LeadOS</span>
+  </div>
+  <h2 style="font-size:22px;font-family:sans-serif;margin-bottom:8px">Welcome! Your lead engine is live. 🚀</h2>
+  <p style="color:#5a7099;font-size:13px;margin-bottom:24px;line-height:1.7">
+    Here's a preview of what your AI agents found today. Your full morning brief arrives tomorrow at 6am CST.
+  </p>
+  <table style="width:100%;border-collapse:collapse;background:#0c1120;border-radius:10px;overflow:hidden;margin-bottom:24px">
+    <thead><tr style="background:#111827">
+      <th style="padding:10px 12px;text-align:left;font-size:10px;color:#5a7099;letter-spacing:1px;text-transform:uppercase">Name</th>
+      <th style="padding:10px 12px;text-align:left;font-size:10px;color:#5a7099;letter-spacing:1px;text-transform:uppercase">Profile</th>
+      <th style="padding:10px 12px;text-align:left;font-size:10px;color:#5a7099;letter-spacing:1px;text-transform:uppercase">AI Score</th>
+    </tr></thead>
+    <tbody>{leads_html}</tbody>
+  </table>
+  <a href="https://tryleados.com/leadOS-dashboard.html"
+     style="display:inline-block;background:#00ff88;color:#000;font-weight:700;padding:12px 24px;border-radius:8px;text-decoration:none;font-family:sans-serif">
+    View Full Dashboard →
+  </a>
+  <p style="color:#2d3f5a;font-size:10px;margin-top:32px">
+    LeadOS · Austin, TX · <a href="https://tryleados.com" style="color:#2d3f5a">tryleados.com</a>
+  </p>
+</body></html>"""
+
+            try:
+                import httpx
+                resp = await asyncio.to_thread(
+                    lambda: __import__('httpx').post(
+                        "https://api.sendgrid.com/v3/mail/send",
+                        headers={"Authorization": f"Bearer {sendgrid_key}", "Content-Type": "application/json"},
+                        json={
+                            "personalizations": [{"to": [{"email": req.email}]}],
+                            "from": {"email": orchestrator.config.outreach_from_email,
+                                     "name": "LeadOS"},
+                            "subject": "🚀 Your lead engine is live — here's your first preview",
+                            "content": [{"type": "text/html", "value": html}],
+                        }
+                    )
+                )
+                if resp.status_code == 202:
+                    log.info(f"Welcome email sent to {req.email}")
+                    orchestrator._log_event("heartbeat", f"Welcome brief sent to {req.email}", "success")
+                else:
+                    log.warning(f"SendGrid returned {resp.status_code}: {resp.text[:200]}")
+            except Exception as e:
+                log.warning(f"Welcome email send failed: {e}")
+
+        import asyncio
+        background_tasks.add_task(_send)
+        return {"status": "queued", "email": req.email}
+
     # ── Start ─────────────────────────────────────────────────────────────
 
     cfg = uvicorn.Config(app=app, host=host, port=port, log_level="warning")

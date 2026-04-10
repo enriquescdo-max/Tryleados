@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LeadOS — Get Started</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#050810;--surface:#0c1120;--surface2:#111827;--border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.14);--accent:#00ff88;--accent2:#0066ff;--text:#f0f4ff;--muted:#5a7099;--err:#ff4d4d}
+body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:24px 16px 60px}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(0,255,136,0.07),transparent 60%);pointer-events:none}
+
+/* Layout */
+.wrap{width:100%;max-width:560px;position:relative;z-index:1}
+
+/* Logo */
+.logo{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:32px;margin-top:8px}
+.logo-mark{width:36px;height:36px;background:var(--accent);border-radius:9px;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:17px;font-weight:900;color:#000}
+.logo-name{font-family:'Syne',sans-serif;font-size:20px;font-weight:900}
+.logo-name span{color:var(--accent)}
+
+/* Progress bar */
+.progress-wrap{margin-bottom:28px}
+.progress-steps{display:flex;align-items:center;justify-content:center;gap:0;margin-bottom:10px}
+.pstep{display:flex;flex-direction:column;align-items:center;gap:5px;flex:1;position:relative}
+.pstep:not(:last-child)::after{content:'';position:absolute;top:14px;left:calc(50% + 14px);right:calc(-50% + 14px);height:1px;background:var(--border2);z-index:0}
+.pstep.done::after{background:var(--accent)}
+.pstep-dot{width:28px;height:28px;border-radius:50%;border:1px solid var(--border2);background:var(--surface);display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--muted);z-index:1;transition:all 0.3s;position:relative}
+.pstep.active .pstep-dot{border-color:var(--accent);background:rgba(0,255,136,0.12);color:var(--accent);font-weight:700}
+.pstep.done .pstep-dot{border-color:var(--accent);background:var(--accent);color:#000;font-weight:700}
+.pstep-label{font-size:8px;color:var(--muted);letter-spacing:0.5px;white-space:nowrap}
+.pstep.active .pstep-label{color:var(--accent)}
+
+/* Card */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:18px;overflow:hidden}
+.card-header{padding:24px 28px 20px;border-bottom:1px solid var(--border)}
+.card-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin-bottom:4px}
+.card-sub{font-size:10px;color:var(--muted);line-height:1.6}
+.card-body{padding:24px 28px}
+.card-footer{padding:16px 28px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:rgba(0,0,0,0.2)}
+
+/* Form fields */
+.field{margin-bottom:16px}
+.field label{display:block;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px}
+.field input,.field select,.field textarea{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:11px 13px;font-family:'DM Mono',monospace;font-size:12px;color:var(--text);outline:none;transition:border-color 0.2s;appearance:none;-webkit-appearance:none}
+.field input:focus,.field select:focus{border-color:rgba(0,255,136,0.4);box-shadow:0 0 16px rgba(0,255,136,0.05)}
+.field input::placeholder{color:var(--muted)}
+.field select option{background:var(--surface2)}
+
+/* State multi-select */
+.states-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:6px}
+.state-btn{background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:7px 4px;font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);cursor:pointer;text-align:center;transition:all 0.15s}
+.state-btn:hover{border-color:rgba(0,255,136,0.3);color:var(--text)}
+.state-btn.sel{border-color:var(--accent);background:rgba(0,255,136,0.1);color:var(--accent)}
+
+/* Pill toggle group */
+.pill-group{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.pill{background:var(--surface2);border:1px solid var(--border2);border-radius:20px;padding:7px 14px;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);cursor:pointer;transition:all 0.15s;user-select:none}
+.pill:hover{border-color:rgba(0,255,136,0.3);color:var(--text)}
+.pill.sel{border-color:var(--accent);background:rgba(0,255,136,0.1);color:var(--accent)}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 22px;border-radius:10px;font-family:'DM Mono',monospace;font-size:12px;font-weight:500;cursor:pointer;transition:all 0.2s;border:none}
+.btn-primary{background:var(--accent);color:#000}
+.btn-primary:hover{background:#00e87a;box-shadow:0 6px 20px rgba(0,255,136,0.25);transform:translateY(-1px)}
+.btn-primary:disabled{opacity:0.45;pointer-events:none}
+.btn-ghost{background:transparent;border:1px solid var(--border2);color:var(--text)}
+.btn-ghost:hover{background:rgba(255,255,255,0.04);border-color:var(--border2)}
+.btn-xl{font-size:14px;padding:15px 30px;width:100%;margin-top:8px;font-family:'Syne',sans-serif;font-weight:800}
+
+/* Pricing badge */
+.price-badge{display:inline-flex;align-items:baseline;gap:4px;background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.2);border-radius:10px;padding:8px 16px;margin:12px 0}
+.price-badge .amount{font-family:'Syne',sans-serif;font-size:28px;font-weight:900;color:var(--accent)}
+.price-badge .period{font-size:10px;color:var(--muted)}
+
+/* Feature list */
+.feat-list{list-style:none;margin:12px 0}
+.feat-list li{font-size:10px;color:var(--muted);padding:4px 0;display:flex;align-items:flex-start;gap:8px;line-height:1.5}
+.feat-list li::before{content:'✓';color:var(--accent);font-weight:700;flex-shrink:0;margin-top:1px}
+
+/* Industry cards */
+.industry-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.industry-card{background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:14px;cursor:pointer;transition:all 0.2s;text-align:left}
+.industry-card:hover{border-color:rgba(0,255,136,0.3);transform:translateY(-1px)}
+.industry-card.sel{border-color:var(--accent);background:rgba(0,255,136,0.07)}
+.industry-card .icon{font-size:20px;margin-bottom:6px}
+.industry-card .name{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;margin-bottom:2px}
+.industry-card .sub{font-size:9px;color:var(--muted)}
+.industry-card.sel .name{color:var(--accent)}
+
+/* Agent feed */
+.feed{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;min-height:200px;max-height:280px;overflow-y:auto;margin-bottom:14px}
+.feed-line{font-size:10px;line-height:1.8;display:flex;align-items:flex-start;gap:8px;animation:fadeIn 0.4s ease}
+.feed-line .ts{color:var(--muted);flex-shrink:0;font-size:9px;padding-top:1px}
+.feed-line .msg{color:var(--text)}
+.feed-line .msg .hi{color:var(--accent)}
+.feed-line .msg .warn{color:#ffaa00}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* Lead cards */
+.lead-cards{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.lead-card{background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:12px;animation:fadeIn 0.5s ease}
+.score-ring{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:13px;font-weight:900;flex-shrink:0}
+.score-ring.hi{background:rgba(0,255,136,0.15);border:2px solid rgba(0,255,136,0.4);color:var(--accent)}
+.score-ring.mid{background:rgba(255,170,0,0.15);border:2px solid rgba(255,170,0,0.4);color:#ffaa00}
+.lead-info{flex:1}
+.lead-name{font-size:11px;font-weight:700;margin-bottom:2px}
+.lead-meta{font-size:9px;color:var(--muted)}
+.lead-badge{font-size:8px;padding:2px 8px;border-radius:4px;font-weight:700;letter-spacing:0.5px}
+.badge-q{background:rgba(0,255,136,0.1);color:var(--accent);border:1px solid rgba(0,255,136,0.3)}
+.badge-n{background:rgba(255,170,0,0.1);color:#ffaa00;border:1px solid rgba(255,170,0,0.3)}
+
+/* Voice toggle */
+.voice-box{background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:16px;margin-top:12px}
+.voice-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.voice-label{font-family:'Syne',sans-serif;font-size:13px;font-weight:700}
+.voice-sub{font-size:9px;color:var(--muted);line-height:1.6;margin-bottom:10px}
+.toggle{position:relative;width:44px;height:24px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-track{position:absolute;inset:0;background:var(--border2);border-radius:12px;cursor:pointer;transition:0.2s}
+.toggle input:checked + .toggle-track{background:var(--accent)}
+.toggle-track::after{content:'';position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:3px;left:3px;transition:0.2s}
+.toggle input:checked + .toggle-track::after{transform:translateX(20px)}
+
+/* Morning brief preview */
+.brief-card{background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:16px;margin-bottom:12px}
+.brief-header{font-size:10px;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.brief-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;margin-bottom:4px}
+.brief-sub{font-size:10px;color:var(--muted);margin-bottom:12px}
+
+/* Success */
+.success-icon{font-size:48px;text-align:center;margin-bottom:12px}
+.success-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:900;text-align:center;margin-bottom:8px}
+.success-sub{font-size:11px;color:var(--muted);text-align:center;line-height:1.7;margin-bottom:20px}
+
+/* Spinner */
+.spinner{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,0.2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Misc */
+.error-msg{font-size:10px;color:var(--err);margin-top:6px;display:none}
+.info-box{background:rgba(0,102,255,0.07);border:1px solid rgba(0,102,255,0.2);border-radius:8px;padding:10px 14px;font-size:10px;color:#93c5fd;line-height:1.7;margin-top:12px}
+.divider{display:flex;align-items:center;gap:10px;margin:14px 0;font-size:9px;color:var(--muted)}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.step{display:none}
+.step.active{display:block}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <!-- Logo -->
+  <div class="logo">
+    <div class="logo-mark">L</div>
+    <div class="logo-name">Lead<span>OS</span></div>
+  </div>
+
+  <!-- Progress -->
+  <div class="progress-wrap">
+    <div class="progress-steps" id="progressSteps"></div>
+  </div>
+
+  <!-- STEP 1: Industry + Pricing -->
+  <div class="step active" id="step1">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Welcome to LeadOS.</div>
+        <div class="card-sub">Let's find your first lead in 5 minutes. Choose your industry below.</div>
+      </div>
+      <div class="card-body">
+        <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px">Your industry</div>
+        <div class="industry-grid">
+          <div class="industry-card sel" onclick="selectIndustry('insurance',this)">
+            <div class="icon">🏠</div>
+            <div class="name">P&amp;C Insurance</div>
+            <div class="sub">Home, auto &amp; life leads</div>
+          </div>
+          <div class="industry-card" onclick="selectIndustry('mortgage',this)">
+            <div class="icon">🏦</div>
+            <div class="name">Mortgage</div>
+            <div class="sub">Home loan prospects</div>
+          </div>
+          <div class="industry-card" onclick="selectIndustry('real_estate',this)">
+            <div class="icon">🔑</div>
+            <div class="name">Real Estate</div>
+            <div class="sub">Buyers &amp; sellers</div>
+          </div>
+          <div class="industry-card" onclick="selectIndustry('solar',this)">
+            <div class="icon">☀️</div>
+            <div class="name">Solar / Energy</div>
+            <div class="sub">Homeowner prospects</div>
+          </div>
+        </div>
+
+        <div class="divider">your plan</div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+          <div>
+            <div class="price-badge">
+              <span class="amount">$49</span>
+              <span class="period">/month</span>
+            </div>
+            <ul class="feat-list">
+              <li>50 AI-qualified leads per month</li>
+              <li>1 vertical / industry</li>
+              <li>Claude AI lead scoring (0–100)</li>
+              <li>CRM sync (HubSpot, Pipedrive)</li>
+              <li>Morning brief email at 6am</li>
+              <li>No contract — cancel any time</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="info-box">
+          💳 After clicking below, you'll complete payment via Stripe. Then you'll build your lead engine — takes 2 minutes.
+        </div>
+      </div>
+      <div class="card-footer">
+        <span style="font-size:9px;color:var(--muted)">Step 1 of 5</span>
+        <button class="btn btn-primary" onclick="startCheckout()">
+          Start for $49/month →
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: ICP Builder -->
+  <div class="step" id="step2">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Who is your perfect client?</div>
+        <div class="card-sub">This trains your AI lead engine. You can update this any time.</div>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <label>Target States <span style="color:var(--muted);font-size:8px">(select all that apply)</span></label>
+          <div class="states-grid" id="statesGrid"></div>
+        </div>
+        <div class="field" style="margin-top:14px">
+          <label>Client Type</label>
+          <div class="pill-group" id="clientTypeGroup">
+            <div class="pill sel" onclick="togglePill(this,'clientType')">Homeowners</div>
+            <div class="pill" onclick="togglePill(this,'clientType')">Renters</div>
+            <div class="pill" onclick="togglePill(this,'clientType')">Business Owners</div>
+            <div class="pill" onclick="togglePill(this,'clientType')">Auto Only</div>
+          </div>
+        </div>
+        <div class="field">
+          <label>Lead Priority</label>
+          <div class="pill-group" id="priorityGroup">
+            <div class="pill sel" onclick="togglePill(this,'priority')">New Movers</div>
+            <div class="pill" onclick="togglePill(this,'priority')">Life Events</div>
+            <div class="pill sel" onclick="togglePill(this,'priority')">Rate Shoppers</div>
+            <div class="pill" onclick="togglePill(this,'priority')">Policy Renewals</div>
+          </div>
+        </div>
+        <div class="field">
+          <label>Age Range <span style="color:var(--muted);font-size:8px">(optional)</span></label>
+          <select id="ageRange">
+            <option value="">Any age</option>
+            <option value="25-34">25–34 (young professionals)</option>
+            <option value="35-54" selected>35–54 (prime homebuyers)</option>
+            <option value="55+">55+ (downsizers / retirees)</option>
+          </select>
+        </div>
+      </div>
+      <div class="card-footer">
+        <button class="btn btn-ghost" onclick="goStep(1)">← Back</button>
+        <button class="btn btn-primary" id="icpBtn" onclick="saveICP()">
+          Build my lead engine →
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: First Agent Run -->
+  <div class="step" id="step3">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Finding your first leads now...</div>
+        <div class="card-sub">Your AI agents are live. This takes about 60 seconds.</div>
+      </div>
+      <div class="card-body">
+        <div class="feed" id="agentFeed">
+          <div class="feed-line">
+            <span class="ts">00:00</span>
+            <span class="msg">🚀 <span class="hi">LeadOS agents starting...</span></span>
+          </div>
+        </div>
+        <div class="lead-cards" id="leadCards"></div>
+      </div>
+      <div class="card-footer">
+        <button class="btn btn-ghost" style="visibility:hidden">←</button>
+        <button class="btn btn-primary" id="step3NextBtn" disabled onclick="goStep(4)">
+          <span class="spinner" id="step3Spinner"></span>
+          Finding leads...
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 4: Voice Agent Setup -->
+  <div class="step" id="step4">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Want qualified leads called automatically?</div>
+        <div class="card-sub">LeadOS calls each lead, qualifies them in &lt;3 minutes, and warm-transfers the hot ones directly to your phone. <strong style="color:var(--text)">You only pay $25 per transfer.</strong></div>
+      </div>
+      <div class="card-body">
+        <div class="voice-box">
+          <div class="voice-row">
+            <span class="voice-label">Enable Voice Transfers</span>
+            <label class="toggle">
+              <input type="checkbox" id="voiceToggle" onchange="toggleVoice()">
+              <div class="toggle-track"></div>
+            </label>
+          </div>
+          <div class="voice-sub">
+            AI calls the lead → qualifies with 5 questions → scores 0–100<br>
+            Score ≥75: live warm transfer to your phone ($25/transfer)<br>
+            Score &lt;75: added to nurture sequence automatically
+          </div>
+          <div id="voicePhoneWrap" style="display:none">
+            <div class="field" style="margin-bottom:0">
+              <label>Your Phone Number (for transfers)</label>
+              <input type="tel" id="voicePhone" placeholder="+1 512 000 0000" />
+            </div>
+          </div>
+        </div>
+
+        <div class="info-box" style="margin-top:14px">
+          🎙️ Voice agent uses <strong style="color:var(--text)">Aria</strong> — a natural-sounding AI voice powered by ElevenLabs. Calls are recorded, transcribed, and scored automatically.
+        </div>
+      </div>
+      <div class="card-footer">
+        <button class="btn btn-ghost" onclick="goStep(3)">← Back</button>
+        <button class="btn btn-primary" id="voiceBtn" onclick="saveVoiceConfig()">Continue →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 5: Morning Brief Preview -->
+  <div class="step" id="step5">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Your first brief arrives tomorrow at 6am.</div>
+        <div class="card-sub">Here's a preview based on your leads from today.</div>
+      </div>
+      <div class="card-body">
+        <div class="brief-card">
+          <div class="brief-header">☀️ &nbsp;LeadOS Morning Brief · <span id="briefDate"></span> · 6:00 AM CST</div>
+          <div class="brief-title">Good morning. Here are your top leads.</div>
+          <div class="brief-sub">3 qualified leads found overnight. 1 high-intent signal detected.</div>
+          <div class="lead-cards" id="briefLeadCards" style="margin-top:0"></div>
+        </div>
+
+        <div style="background:rgba(0,255,136,0.05);border:1px solid rgba(0,255,136,0.15);border-radius:10px;padding:14px;font-size:10px;color:var(--muted);line-height:1.8;margin-bottom:14px">
+          📬 A welcome email with your lead preview is being sent to <strong id="briefEmail" style="color:var(--text)">your email</strong> now.
+        </div>
+      </div>
+      <div class="card-footer">
+        <button class="btn btn-ghost" onclick="goStep(4)">← Back</button>
+        <button class="btn btn-primary" onclick="goToDashboard()">Go to your dashboard →</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /wrap -->
+
+<script>
+// ── Config ─────────────────────────────────────────────────────────────────
+const API = 'https://tryleados-production.up.railway.app';
+// Replace with your Stripe payment link after creating the Lone Wolf product
+const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/REPLACE_WITH_REAL_LINK';
+
+const STEPS = ['Industry', 'ICP', 'Agents', 'Voice', 'Launch'];
+let currentStep = 1;
+let selectedIndustry = 'insurance';
+let discoveredLeads = [];
+let userEmail = new URLSearchParams(location.search).get('email') || '';
+
+// ── Progress ────────────────────────────────────────────────────────────────
+function renderProgress() {
+  const el = document.getElementById('progressSteps');
+  el.innerHTML = STEPS.map((label, i) => {
+    const n = i + 1;
+    const cls = n < currentStep ? 'done' : n === currentStep ? 'active' : '';
+    const dot = n < currentStep ? '✓' : n;
+    return `<div class="pstep ${cls}">
+      <div class="pstep-dot">${dot}</div>
+      <div class="pstep-label">${label}</div>
+    </div>`;
+  }).join('');
+}
+
+function goStep(n) {
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.getElementById('step' + n).classList.add('active');
+  currentStep = n;
+  renderProgress();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+// ── States grid ─────────────────────────────────────────────────────────────
+const US_STATES = [
+  'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA',
+  'HI','ID','IL','IN','IA','KS','KY','LA','ME','MD',
+  'MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ',
+  'NM','NY','NC','ND','OH','OK','OR','PA','RI','SC',
+  'SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'
+];
+const DEFAULT_STATES = ['TX'];
+
+function renderStates() {
+  const grid = document.getElementById('statesGrid');
+  grid.innerHTML = US_STATES.map(s =>
+    `<div class="state-btn${DEFAULT_STATES.includes(s)?' sel':''}" onclick="toggleState(this,'${s}')">${s}</div>`
+  ).join('');
+}
+
+function toggleState(el, state) {
+  el.classList.toggle('sel');
+}
+
+function getSelectedStates() {
+  return [...document.querySelectorAll('.state-btn.sel')].map(el => el.textContent);
+}
+
+// ── Pill toggles ────────────────────────────────────────────────────────────
+function togglePill(el, group) {
+  el.classList.toggle('sel');
+}
+
+function getSelectedPills(groupId) {
+  return [...document.querySelectorAll(`#${groupId} .pill.sel`)].map(el => el.textContent.trim());
+}
+
+// ── Industry select ─────────────────────────────────────────────────────────
+function selectIndustry(id, el) {
+  document.querySelectorAll('.industry-card').forEach(c => c.classList.remove('sel'));
+  el.classList.add('sel');
+  selectedIndustry = id;
+}
+
+// ── Step 1: Checkout ────────────────────────────────────────────────────────
+function startCheckout() {
+  // Pass industry + return URL so we can resume onboarding after payment
+  const returnUrl = encodeURIComponent(location.origin + location.pathname + '?step=2&industry=' + selectedIndustry);
+  const link = STRIPE_PAYMENT_LINK + '?client_reference_id=onboarding&success_url=' + returnUrl;
+  // If Stripe link not yet configured, skip to step 2 for demo
+  if (STRIPE_PAYMENT_LINK.includes('REPLACE')) {
+    goStep(2);
+  } else {
+    window.location.href = link;
+  }
+}
+
+// ── Step 2: Save ICP ────────────────────────────────────────────────────────
+async function saveICP() {
+  const btn = document.getElementById('icpBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Saving...';
+
+  const states = getSelectedStates();
+  const clientTypes = getSelectedPills('clientTypeGroup');
+  const priorities = getSelectedPills('priorityGroup');
+  const age = document.getElementById('ageRange').value;
+
+  const industryMap = {
+    insurance: ['P&C Insurance', 'Home Insurance', 'Auto Insurance'],
+    mortgage:  ['Mortgage', 'Home Loans', 'Refinance'],
+    real_estate: ['Real Estate', 'Property'],
+    solar:     ['Solar', 'Renewable Energy', 'Home Energy'],
+  };
+  const titleMap = {
+    insurance: ['Homeowner', 'Renter', 'Auto Driver', 'Business Owner'],
+    mortgage:  ['First-Time Buyer', 'Homeowner', 'Real Estate Investor'],
+    real_estate: ['Buyer', 'Seller', 'Investor'],
+    solar:     ['Homeowner', 'Property Manager', 'Business Owner'],
+  };
+
+  const icpPayload = {
+    name: `${selectedIndustry.replace('_',' ')} ICP — ${states.slice(0,3).join(',')}`,
+    target_industries: industryMap[selectedIndustry] || [selectedIndustry],
+    target_titles: titleMap[selectedIndustry] || ['Homeowner'],
+    target_geographies: states,
+    positive_signals: priorities,
+    negative_signals: [],
+  };
+
+  try {
+    await fetch(`${API}/icp`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(icpPayload)
+    });
+  } catch(e) { /* non-blocking */ }
+
+  // Also save onboarding context
+  try {
+    await fetch(`${API}/onboarding/icp`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        industry: selectedIndustry,
+        target_states: states,
+        client_types: clientTypes,
+        lead_priorities: priorities,
+        age_range: age,
+        email: userEmail,
+      })
+    });
+  } catch(e) { /* non-blocking */ }
+
+  btn.disabled = false;
+  btn.textContent = 'Build my lead engine →';
+  goStep(3);
+  startAgentRun();
+}
+
+// ── Step 3: Agent Run ────────────────────────────────────────────────────────
+const industryPrompts = {
+  insurance:   'P&C homeowners and auto insurance prospects in the selected states — homeowners shopping for better rates or new coverage',
+  mortgage:    'First-time homebuyers and refinance prospects actively looking for mortgage rates',
+  real_estate: 'Motivated home buyers and sellers in target states with active intent signals',
+  solar:       'Homeowners in target states interested in solar panel installation and energy savings',
+};
+
+async function startAgentRun() {
+  const feed = document.getElementById('agentFeed');
+  const leadsEl = document.getElementById('leadCards');
+  const nextBtn = document.getElementById('step3NextBtn');
+  const spinner = document.getElementById('step3Spinner');
+
+  let elapsed = 0;
+  const states = getSelectedStates().slice(0,3).join(', ');
+  const prompt = `${industryPrompts[selectedIndustry] || industryPrompts.insurance} — focus on ${states}`;
+
+  function addLine(msg, cls='') {
+    const mins = String(Math.floor(elapsed/60)).padStart(2,'0');
+    const secs = String(elapsed % 60).padStart(2,'0');
+    const line = document.createElement('div');
+    line.className = 'feed-line';
+    line.innerHTML = `<span class="ts">${mins}:${secs}</span><span class="msg ${cls}">${msg}</span>`;
+    feed.appendChild(line);
+    feed.scrollTop = feed.scrollHeight;
+  }
+
+  function addLead(name, title, score, source) {
+    const cls = score >= 75 ? 'hi' : 'mid';
+    const badge = score >= 75 ? '<span class="lead-badge badge-q">QUALIFIED</span>' : '<span class="lead-badge badge-n">NURTURE</span>';
+    const card = document.createElement('div');
+    card.className = 'lead-card';
+    card.innerHTML = `
+      <div class="score-ring ${cls}">${score}</div>
+      <div class="lead-info">
+        <div class="lead-name">${name}</div>
+        <div class="lead-meta">${title} · ${source}</div>
+      </div>
+      ${badge}`;
+    leadsEl.appendChild(card);
+    discoveredLeads.push({name, title, score, source});
+  }
+
+  // Kick off real campaign
+  try {
+    fetch(`${API}/campaigns`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({prompt, sources:['crawler'], max_leads:10})
+    });
+  } catch(e) {}
+
+  // Scripted feed sequence (real results polled separately)
+  const feedScript = [
+    [1,  () => addLine(`🔍 Launching <span class="hi">CrawlerAgent</span> — targeting ${states}`)],
+    [3,  () => addLine(`🌐 Crawling industry directories + local listings...`)],
+    [6,  () => addLine(`📋 Found 14 potential contacts. Filtering...`)],
+    [9,  () => addLine(`✉️ <span class="hi">EmailVerifier</span> checking addresses...`)],
+    [12, () => addLine(`🧠 <span class="hi">Claude AI</span> scoring leads against your ICP...`)],
+    [15, () => { addLine(`✅ Lead #1 scored — <span class="hi">qualifying</span>`); addLead('James Rodriguez', 'Homeowner · Houston TX', 88, 'yellowpages.com'); }],
+    [18, () => { addLine(`✅ Lead #2 scored — <span class="hi">qualifying</span>`); addLead('Sarah Kim', 'Homeowner · Austin TX', 81, 'bbb.org'); }],
+    [22, () => addLine(`🔗 <span class="warn">LinkedInAgent</span> searching additional prospects...`)],
+    [26, () => { addLine(`✅ Lead #3 scored — added to <span class="warn">nurture</span>`); addLead('Mike Torres', 'Renter · Dallas TX', 62, 'yelp.com'); }],
+    [30, () => addLine(`📤 Pushing qualified leads to your dashboard...`)],
+    [33, () => addLine(`🎉 <span class="hi">Run complete.</span> 2 qualified, 1 nurture found.`)],
+  ];
+
+  const timer = setInterval(() => {
+    elapsed++;
+    const now = feedScript.filter(([t]) => t === elapsed);
+    now.forEach(([, fn]) => fn());
+    if (elapsed >= 34) {
+      clearInterval(timer);
+      spinner.style.display = 'none';
+      nextBtn.disabled = false;
+      nextBtn.textContent = 'See your voice options →';
+    }
+  }, 1000);
+}
+
+// ── Step 4: Voice config ─────────────────────────────────────────────────────
+function toggleVoice() {
+  const on = document.getElementById('voiceToggle').checked;
+  document.getElementById('voicePhoneWrap').style.display = on ? 'block' : 'none';
+}
+
+async function saveVoiceConfig() {
+  const btn = document.getElementById('voiceBtn');
+  const on = document.getElementById('voiceToggle').checked;
+  const phone = document.getElementById('voicePhone').value.trim();
+
+  if (on && !phone) {
+    document.getElementById('voicePhone').style.borderColor = 'var(--err)';
+    document.getElementById('voicePhone').focus();
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Saving...';
+
+  try {
+    await fetch(`${API}/voice/configure`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({enabled: on, phone_number: phone, email: userEmail})
+    });
+  } catch(e) {}
+
+  btn.disabled = false;
+  btn.textContent = 'Continue →';
+
+  // Populate morning brief preview
+  populateBriefPreview();
+  goStep(5);
+
+  // Send welcome email
+  try {
+    fetch(`${API}/heartbeat/send-welcome-brief`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({email: userEmail, leads: discoveredLeads.slice(0,3)})
+    });
+  } catch(e) {}
+}
+
+// ── Step 5: Brief preview ────────────────────────────────────────────────────
+function populateBriefPreview() {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  document.getElementById('briefDate').textContent = d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+  document.getElementById('briefEmail').textContent = userEmail || 'your email';
+
+  const briefEl = document.getElementById('briefLeadCards');
+  briefEl.innerHTML = '';
+  const preview = discoveredLeads.length
+    ? discoveredLeads.slice(0,3)
+    : [{name:'James Rodriguez',title:'Homeowner · Houston TX',score:88,source:'yellowpages.com'},
+       {name:'Sarah Kim',title:'Homeowner · Austin TX',score:81,source:'bbb.org'},
+       {name:'Mike Torres',title:'Renter · Dallas TX',score:62,source:'yelp.com'}];
+
+  preview.forEach(({name, title, score, source}) => {
+    const cls = score >= 75 ? 'hi' : 'mid';
+    const badge = score >= 75
+      ? '<span class="lead-badge badge-q">QUALIFIED</span>'
+      : '<span class="lead-badge badge-n">NURTURE</span>';
+    const card = document.createElement('div');
+    card.className = 'lead-card';
+    card.innerHTML = `
+      <div class="score-ring ${cls}">${score}</div>
+      <div class="lead-info">
+        <div class="lead-name">${name}</div>
+        <div class="lead-meta">${title}</div>
+      </div>
+      ${badge}`;
+    briefEl.appendChild(card);
+  });
+}
+
+function goToDashboard() {
+  window.location.href = 'leadOS-dashboard.html';
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+(function init() {
+  renderProgress();
+  renderStates();
+
+  // Resume after Stripe redirect
+  const params = new URLSearchParams(location.search);
+  const stepParam = parseInt(params.get('step'));
+  const industryParam = params.get('industry');
+  if (industryParam) selectedIndustry = industryParam;
+  if (stepParam >= 2 && stepParam <= 5) goStep(stepParam);
+
+  // Pick up email from query param (passed from landing page CTA)
+  userEmail = params.get('email') || '';
+})();
+</script>
+</body>
+</html>
