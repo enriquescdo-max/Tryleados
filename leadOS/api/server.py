@@ -430,6 +430,742 @@ Return ONLY valid JSON with keys "subject" and "body". No markdown, no explanati
             }
             return fallbacks.get(req.step, fallbacks[1])
 
+    # ══════════════════════════════════════════════════════════════════════
+    # STRIPE BILLING
+    # ══════════════════════════════════════════════════════════════════════
+
+    STRIPE_SECRET_KEY      = os.getenv("STRIPE_SECRET_KEY", "")
+    STRIPE_WEBHOOK_SECRET  = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+
+    # Price IDs — create these in Stripe Dashboard then set as env vars
+    PRICE_LONE_WOLF   = os.getenv("STRIPE_PRICE_LONE_WOLF",  "price_lone_wolf_monthly")
+    PRICE_TEAM        = os.getenv("STRIPE_PRICE_TEAM",       "price_team_monthly")
+    PRICE_WHITE_LABEL = os.getenv("STRIPE_PRICE_WHITE_LABEL","price_white_label_monthly")
+    PRICE_TRANSFER    = os.getenv("STRIPE_PRICE_TRANSFER",   "price_voice_transfer")
+
+    # In-memory subscription store (email → tier)
+    _subscriptions: Dict[str, Dict] = {}
+
+    class CheckoutRequest(BaseModel):
+        tier: str = "lone_wolf"   # lone_wolf | team | white_label
+        email: str = ""
+        success_url: str = "https://tryleados.com/leadOS-onboarding.html?step=2"
+        cancel_url: str  = "https://tryleados.com"
+
+    class TransferBillRequest(BaseModel):
+        email: str
+        lead_name: str = ""
+        lead_score: float = 0
+
+    @app.post("/billing/checkout")
+    async def create_checkout(req: CheckoutRequest):
+        """Create a Stripe Checkout session and return the URL."""
+        if not STRIPE_SECRET_KEY or STRIPE_SECRET_KEY.startswith("sk_test_REPLACE"):
+            # Return a demo URL if Stripe not yet configured
+            return {
+                "url": req.success_url + "&demo=true",
+                "session_id": "demo_session",
+                "note": "Set STRIPE_SECRET_KEY in Railway to enable real billing",
+            }
+        try:
+            import stripe
+            stripe.api_key = STRIPE_SECRET_KEY
+            price_map = {
+                "lone_wolf":   PRICE_LONE_WOLF,
+                "team":        PRICE_TEAM,
+                "white_label": PRICE_WHITE_LABEL,
+            }
+            price_id = price_map.get(req.tier, PRICE_LONE_WOLF)
+            session = stripe.checkout.Session.create(
+                payment_method_types=["card"],
+                line_items=[{"price": price_id, "quantity": 1}],
+                mode="subscription",
+                customer_email=req.email or None,
+                success_url=req.success_url + "?session_id={CHECKOUT_SESSION_ID}",
+                cancel_url=req.cancel_url,
+                metadata={"tier": req.tier, "email": req.email},
+            )
+            return {"url": session.url, "session_id": session.id}
+        except Exception as e:
+            log.error(f"Stripe checkout failed: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.post("/billing/webhook")
+    async def stripe_webhook(request):
+        """Handle Stripe webhook events."""
+        from fastapi import Request
+        payload  = await request.body()
+        sig      = request.headers.get("stripe-signature", "")
+
+        if not STRIPE_SECRET_KEY:
+            return {"status": "skipped_no_key"}
+
+        try:
+            import stripe
+            stripe.api_key = STRIPE_SECRET_KEY
+            if STRIPE_WEBHOOK_SECRET:
+                event = stripe.Webhook.construct_event(payload, sig, STRIPE_WEBHOOK_SECRET)
+            else:
+                import json
+                event = json.loads(payload)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Webhook error: {e}")
+
+        etype = event.get("type", "")
+        data  = event.get("data", {}).get("object", {})
+        email = (data.get("customer_email") or
+                 data.get("metadata", {}).get("email") or "")
+
+        if etype == "checkout.session.completed":
+            tier = data.get("metadata", {}).get("tier", "lone_wolf")
+            _subscriptions[email] = {
+                "tier": tier, "status": "active",
+                "stripe_customer_id": data.get("customer"),
+                "stripe_subscription_id": data.get("subscription"),
+                "activated_at": datetime.utcnow().isoformat(),
+            }
+            orchestrator._log_event("billing", f"Subscription activated: {tier} for {email}", "success")
+            log.info(f"✅ Checkout complete — {tier} for {email}")
+
+        elif etype == "customer.subscription.deleted":
+            if email in _subscriptions:
+                _subscriptions[email]["status"] = "cancelled"
+            orchestrator._log_event("billing", f"Subscription cancelled for {email}", "info")
+
+        elif etype == "invoice.payment_failed":
+            orchestrator._log_event("billing", f"Payment failed for {email}", "error")
+
+        elif etype == "invoice.paid":
+            if email in _subscriptions:
+                _subscriptions[email]["last_paid"] = datetime.utcnow().isoformat()
+            orchestrator._log_event("billing", f"Invoice paid for {email}", "success")
+
+        return {"received": True, "type": etype}
+
+    @app.post("/billing/transfer")
+    async def bill_transfer(req: TransferBillRequest):
+        """Bill $25 per qualified voice transfer via Stripe usage record."""
+        if not STRIPE_SECRET_KEY or not req.email:
+            return {"status": "skipped", "reason": "Stripe not configured or no email"}
+
+        sub = _subscriptions.get(req.email, {})
+        if not sub.get("stripe_subscription_id"):
+            return {"status": "skipped", "reason": "No active subscription found"}
+
+        try:
+            import stripe
+            stripe.api_key = STRIPE_SECRET_KEY
+            # Create a one-time invoice item for $25
+            stripe.InvoiceItem.create(
+                customer=sub["stripe_customer_id"],
+                amount=2500,  # $25.00 in cents
+                currency="usd",
+                description=f"Qualified lead transfer — {req.lead_name} (score: {req.lead_score})",
+            )
+            orchestrator._log_event("billing", f"Transfer billed $25 for {req.email} — {req.lead_name}", "success")
+            return {"status": "billed", "amount": 25.00, "email": req.email}
+        except Exception as e:
+            log.error(f"Transfer billing failed: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.get("/billing/subscription")
+    async def get_subscription(email: str):
+        return _subscriptions.get(email, {"status": "none", "tier": None})
+
+    # ══════════════════════════════════════════════════════════════════════
+    # SUPPORT CHATBOT
+    # ══════════════════════════════════════════════════════════════════════
+
+    SUPPORT_SYSTEM_PROMPT = """You are the LeadOS support agent. You know everything about LeadOS:
+the product, pricing, features, how agents work, billing, voice transfers, and common troubleshooting.
+
+Pricing:
+- Lone Wolf: $49/month (50 leads, 1 vertical, no team seats)
+- Team: $149/month (500 leads, 3 verticals, 3 seats)
+- White Label: $399/month (unlimited leads, all verticals, custom branding)
+- Voice transfers: $25 per qualified transfer (Lone Wolf), $18 (Team)
+
+Key features:
+- 8 AI agents: Crawler, LinkedIn, Enricher, Email Verifier, Signal Detector, Qualifier, CRM Sync, Outreach
+- Claude AI scores leads 0-100 against the user's ICP
+- Leads scoring 75+ trigger automatic voice qualification calls via Aria (ElevenLabs voice)
+- Qualified leads warm-transfer directly to the agent's phone via Twilio
+- CRM integrations: HubSpot, Salesforce, Pipedrive, GoHighLevel
+- Morning brief email delivered at 6am CST with top leads
+
+If you cannot answer something, say: "Let me flag this for Enrique — he'll respond within 24 hours."
+Never make up pricing, features, or capabilities that don't exist.
+Keep responses concise (3-5 sentences max) and action-oriented."""
+
+    class ChatMessageRequest(BaseModel):
+        message: str
+        session_id: str = ""
+        history: List[Dict] = []
+        email: str = ""
+
+    @app.post("/chat/message")
+    async def chat_message(req: ChatMessageRequest):
+        """Support chatbot powered by Claude API with MetaClaw memory injection."""
+        if not orchestrator.config.anthropic_api_key:
+            return {"reply": "Chat is not available right now — ANTHROPIC_API_KEY not configured. Email support@tryleados.com for help."}
+
+        try:
+            import anthropic, asyncio
+            from core.metaclaw import load_user_memory, build_user_context, inject_memory
+
+            # P10: Load user memory and inject into system prompt
+            user_memory = await load_user_memory(req.email)
+            leads_summary = {
+                "total": len(orchestrator.leads_db),
+                "qualified": sum(1 for l in orchestrator.leads_db.values() if l.is_qualified),
+                "avg_score": round(
+                    sum(l.ai_score for l in orchestrator.leads_db.values() if l.ai_score)
+                    / max(1, sum(1 for l in orchestrator.leads_db.values() if l.ai_score)), 1
+                ),
+            }
+            user_ctx = build_user_context(user_memory, leads_summary)
+            system   = inject_memory(SUPPORT_SYSTEM_PROMPT, user_ctx)
+
+            # Build messages array from history + new message
+            messages = []
+            for turn in req.history[-8:]:  # last 8 turns for context
+                role = turn.get("role", "user")
+                if role in ("user", "assistant"):
+                    messages.append({"role": role, "content": str(turn.get("content", ""))})
+
+            # Ensure last message is the current user input
+            if not messages or messages[-1].get("content") != req.message:
+                messages.append({"role": "user", "content": req.message})
+
+            client = anthropic.Anthropic(api_key=orchestrator.config.anthropic_api_key)
+            response = await asyncio.to_thread(
+                client.messages.create,
+                model="claude-sonnet-4-20250514",
+                max_tokens=512,
+                system=system,
+                messages=messages,
+            )
+            reply = response.content[0].text.strip()
+
+            # Persist to Supabase conversation_history if available
+            try:
+                from db import supabase_client
+                if supabase_client.is_ready() and req.email:
+                    for role, content in [("user", req.message), ("assistant", reply)]:
+                        await asyncio.to_thread(
+                            supabase_client.client.table("conversation_history").insert({
+                                "role": role, "content": content,
+                                "session_id": req.session_id or "anon",
+                            }).execute
+                        )
+            except Exception:
+                pass
+
+            orchestrator._log_event("chat", f"Chat response sent (session={req.session_id[:8]})", "info")
+            return {"reply": reply, "session_id": req.session_id}
+
+        except Exception as e:
+            log.error(f"Chat error: {e}")
+            return {"reply": "I'm having trouble right now. Please try again or email support@tryleados.com."}
+
+    # ══════════════════════════════════════════════════════════════════════
+    # ONBOARDING
+    # ══════════════════════════════════════════════════════════════════════
+
+    class OnboardingICPRequest(BaseModel):
+        industry: str = "insurance"
+        target_states: List[str] = []
+        client_types: List[str] = []
+        lead_priorities: List[str] = []
+        age_range: str = ""
+        email: str = ""
+
+    class VoiceConfigRequest(BaseModel):
+        enabled: bool = False
+        phone_number: str = ""
+        email: str = ""
+
+    class WelcomeBriefRequest(BaseModel):
+        email: str
+        leads: List[Dict] = []
+
+    # In-memory voice config store (per email)
+    _voice_configs: Dict[str, Dict] = {}
+
+    @app.post("/onboarding/icp")
+    async def onboarding_icp(req: OnboardingICPRequest):
+        """Save onboarding ICP and kick off first campaign."""
+        from core.models import ICPProfile
+
+        industry_map = {
+            "insurance":   ["P&C Insurance", "Home Insurance", "Auto Insurance"],
+            "mortgage":    ["Mortgage", "Home Loans"],
+            "real_estate": ["Real Estate", "Property"],
+            "solar":       ["Solar", "Renewable Energy"],
+        }
+        industries = industry_map.get(req.industry, [req.industry.replace("_", " ").title()])
+
+        icp = ICPProfile(
+            name=f"{req.industry.replace('_',' ').title()} ICP",
+            target_industries=industries,
+            target_geographies=req.target_states,
+            positive_signals=req.lead_priorities,
+        )
+        orchestrator.update_icp(icp)
+
+        # Persist to Supabase user_memory if available
+        try:
+            from db import supabase_client
+            if supabase_client.is_ready() and req.email:
+                import asyncio
+                await asyncio.to_thread(
+                    supabase_client.client.table("user_memory").upsert({
+                        "industry": req.industry,
+                        "icp_description": f"{', '.join(industries)} — {', '.join(req.target_states)}",
+                        "target_states": req.target_states,
+                        "memory_notes": f"client_types={req.client_types}, priorities={req.lead_priorities}",
+                    }).execute
+                )
+        except Exception as e:
+            log.warning(f"Supabase user_memory write failed: {e}")
+
+        orchestrator._log_event("onboarding", f"ICP saved: {icp.name}", "success")
+        return {"status": "icp_saved", "icp_name": icp.name, "states": req.target_states}
+
+    @app.post("/voice/configure")
+    async def configure_voice(req: VoiceConfigRequest):
+        """Save voice agent config for a user."""
+        key = req.email or "default"
+        _voice_configs[key] = {
+            "enabled": req.enabled,
+            "phone_number": req.phone_number,
+            "updated_at": datetime.utcnow().isoformat(),
+        }
+        orchestrator._log_event(
+            "voice",
+            f"Voice {'enabled' if req.enabled else 'disabled'} for {key}",
+            "success"
+        )
+        return {"status": "voice_configured", "enabled": req.enabled}
+
+    @app.get("/voice/config")
+    async def get_voice_config(email: str = "default"):
+        return _voice_configs.get(email, {"enabled": False, "phone_number": ""})
+
+    @app.post("/heartbeat/send-welcome-brief")
+    async def send_welcome_brief(req: WelcomeBriefRequest, background_tasks: BackgroundTasks):
+        """Send welcome email with lead preview via SendGrid."""
+        if not req.email:
+            return {"status": "skipped", "reason": "no email provided"}
+
+        async def _send():
+            sendgrid_key = orchestrator.config.sendgrid_api_key
+            if not sendgrid_key:
+                log.warning("SENDGRID_API_KEY not set — skipping welcome email")
+                return
+
+            leads_html = "".join([
+                f"<tr><td style='padding:8px 12px;font-family:monospace;font-size:13px'>{l.get('name','—')}</td>"
+                f"<td style='padding:8px 12px;color:#5a7099;font-size:12px'>{l.get('title','')}</td>"
+                f"<td style='padding:8px 12px;font-weight:700;color:#00ff88'>{l.get('score',0)}</td></tr>"
+                for l in req.leads[:3]
+            ]) or "<tr><td colspan='3' style='padding:8px 12px;color:#5a7099'>Leads are generating now — check your dashboard.</td></tr>"
+
+            html = f"""
+<html><body style="background:#050810;color:#f0f4ff;font-family:'DM Mono',monospace;padding:32px;max-width:560px;margin:auto">
+  <div style="margin-bottom:24px">
+    <span style="background:#00ff88;color:#000;font-weight:900;font-family:sans-serif;font-size:16px;padding:6px 12px;border-radius:8px">LeadOS</span>
+  </div>
+  <h2 style="font-size:22px;font-family:sans-serif;margin-bottom:8px">Welcome! Your lead engine is live. 🚀</h2>
+  <p style="color:#5a7099;font-size:13px;margin-bottom:24px;line-height:1.7">
+    Here's a preview of what your AI agents found today. Your full morning brief arrives tomorrow at 6am CST.
+  </p>
+  <table style="width:100%;border-collapse:collapse;background:#0c1120;border-radius:10px;overflow:hidden;margin-bottom:24px">
+    <thead><tr style="background:#111827">
+      <th style="padding:10px 12px;text-align:left;font-size:10px;color:#5a7099;letter-spacing:1px;text-transform:uppercase">Name</th>
+      <th style="padding:10px 12px;text-align:left;font-size:10px;color:#5a7099;letter-spacing:1px;text-transform:uppercase">Profile</th>
+      <th style="padding:10px 12px;text-align:left;font-size:10px;color:#5a7099;letter-spacing:1px;text-transform:uppercase">AI Score</th>
+    </tr></thead>
+    <tbody>{leads_html}</tbody>
+  </table>
+  <a href="https://tryleados.com/leadOS-dashboard.html"
+     style="display:inline-block;background:#00ff88;color:#000;font-weight:700;padding:12px 24px;border-radius:8px;text-decoration:none;font-family:sans-serif">
+    View Full Dashboard →
+  </a>
+  <p style="color:#2d3f5a;font-size:10px;margin-top:32px">
+    LeadOS · Austin, TX · <a href="https://tryleados.com" style="color:#2d3f5a">tryleados.com</a>
+  </p>
+</body></html>"""
+
+            try:
+                import httpx
+                resp = await asyncio.to_thread(
+                    lambda: __import__('httpx').post(
+                        "https://api.sendgrid.com/v3/mail/send",
+                        headers={"Authorization": f"Bearer {sendgrid_key}", "Content-Type": "application/json"},
+                        json={
+                            "personalizations": [{"to": [{"email": req.email}]}],
+                            "from": {"email": orchestrator.config.outreach_from_email,
+                                     "name": "LeadOS"},
+                            "subject": "🚀 Your lead engine is live — here's your first preview",
+                            "content": [{"type": "text/html", "value": html}],
+                        }
+                    )
+                )
+                if resp.status_code == 202:
+                    log.info(f"Welcome email sent to {req.email}")
+                    orchestrator._log_event("heartbeat", f"Welcome brief sent to {req.email}", "success")
+                else:
+                    log.warning(f"SendGrid returned {resp.status_code}: {resp.text[:200]}")
+            except Exception as e:
+                log.warning(f"Welcome email send failed: {e}")
+
+        import asyncio
+        background_tasks.add_task(_send)
+        return {"status": "queued", "email": req.email}
+
+    # ══════════════════════════════════════════════════════════════════════
+    # VOICE AGENT — VAPI + TWILIO (P11-P15)
+    # ══════════════════════════════════════════════════════════════════════
+
+    VAPI_KEY       = os.getenv("VAPI_API_KEY", "")
+    ELEVENLABS_VID = os.getenv("ELEVENLABS_VOICE_ID", "")
+    TWILIO_PHONE   = os.getenv("TWILIO_PHONE_NUMBER", "")
+
+    # Cached assistant ID (created once per process)
+    _vapi_assistant_id_store: Dict[str, Optional[str]] = {"id": None}
+
+    async def _get_or_create_vapi_assistant(transfer_phone: str = "") -> Optional[str]:
+        if _vapi_assistant_id_store["id"]:
+            return _vapi_assistant_id_store["id"]
+        if not VAPI_KEY:
+            return None
+        from core.voice_agent import build_vapi_assistant_config, create_vapi_assistant
+        config = build_vapi_assistant_config(
+            elevenlabs_voice_id=ELEVENLABS_VID,
+            transfer_phone=transfer_phone,
+        )
+        aid = await create_vapi_assistant(VAPI_KEY, config)
+        _vapi_assistant_id_store["id"] = aid
+        if aid:
+            orchestrator._log_event("voice", f"Vapi assistant created: {aid}", "success")
+        return aid
+
+    class CallLeadRequest(BaseModel):
+        lead_id: str
+        override_phone: Optional[str] = None
+
+    @app.post("/voice/call")
+    async def call_lead(req: CallLeadRequest):
+        """Initiate an outbound Vapi call to a lead."""
+        lead = orchestrator.leads_db.get(req.lead_id)
+        if not lead:
+            raise HTTPException(status_code=404, detail=f"Lead {req.lead_id} not found")
+
+        lead_phone = req.override_phone or lead.phone
+        if not lead_phone:
+            raise HTTPException(status_code=400, detail="Lead has no phone number")
+
+        if not VAPI_KEY:
+            return {"status": "skipped", "reason": "VAPI_API_KEY not configured — set in Railway"}
+        if not TWILIO_PHONE:
+            return {"status": "skipped", "reason": "TWILIO_PHONE_NUMBER not configured — set in Railway"}
+
+        # Get transfer phone from any active voice config
+        transfer_phone = next(
+            (cfg["phone_number"] for cfg in _voice_configs.values()
+             if cfg.get("enabled") and cfg.get("phone_number")),
+            ""
+        )
+
+        assistant_id = await _get_or_create_vapi_assistant(transfer_phone)
+        if not assistant_id:
+            raise HTTPException(status_code=503, detail="Failed to initialize Vapi assistant")
+
+        from core.voice_agent import initiate_outbound_call
+        call_id = await initiate_outbound_call(
+            vapi_key=VAPI_KEY,
+            assistant_id=assistant_id,
+            lead_phone=lead_phone,
+            twilio_phone=TWILIO_PHONE,
+            lead_name=f"{lead.first_name or ''} {lead.last_name or ''}".strip(),
+            metadata={"lead_id": req.lead_id, "ai_score": str(lead.ai_score or 0)},
+        )
+        if call_id:
+            orchestrator._log_event("voice", f"Call initiated → {lead.first_name} ({lead_phone})", "success")
+            return {"status": "call_initiated", "call_id": call_id, "lead_id": req.lead_id}
+        raise HTTPException(status_code=503, detail="Vapi call initiation failed")
+
+    @app.post("/webhook/vapi/call-started")
+    async def vapi_call_started(request):
+        from fastapi import Request
+        payload = await request.json()
+        call_id = payload.get("callId") or payload.get("id", "")
+        lead_id = (payload.get("metadata") or {}).get("lead_id", "")
+        orchestrator._log_event("voice", f"Call started: {call_id} | lead={lead_id}", "info")
+        return {"received": True}
+
+    @app.post("/webhook/vapi/call-ended")
+    async def vapi_call_ended(request, background_tasks: BackgroundTasks):
+        from fastapi import Request
+        payload = await request.json()
+        call   = payload.get("call", payload)
+        call_id= call.get("id", "")
+        meta   = call.get("metadata") or {}
+        lead_id= meta.get("lead_id", "")
+        duration   = call.get("durationSeconds", 0) or 0
+        transcript = call.get("transcript", "") or ""
+        recording  = call.get("recordingUrl", "") or ""
+
+        from core.voice_agent import score_call_transcript, log_call_to_supabase
+
+        scored = score_call_transcript(transcript)
+        score  = scored["score"]
+        outcome= scored["outcome"]
+
+        lead = orchestrator.leads_db.get(lead_id)
+        score_before = float(lead.ai_score or 0) if lead else 0.0
+        if lead:
+            lead.ai_score = score
+            lead.ai_score_reasoning = f"Voice qualified: {outcome} (score {score})"
+
+        transferred = (outcome == "transfer")
+
+        async def _post_call():
+            await log_call_to_supabase(
+                call_id, lead_id, duration, score_before, score,
+                transferred, recording, transcript, outcome,
+            )
+            # Bill $25 per transfer (P14)
+            if transferred and STRIPE_SECRET_KEY:
+                for email, sub in _subscriptions.items():
+                    if sub.get("status") == "active" and sub.get("stripe_customer_id"):
+                        try:
+                            import stripe
+                            stripe.api_key = STRIPE_SECRET_KEY
+                            stripe.InvoiceItem.create(
+                                customer=sub["stripe_customer_id"],
+                                amount=2500, currency="usd",
+                                description=f"Qualified transfer — {lead.first_name if lead else 'lead'} (score {score})",
+                            )
+                            orchestrator._log_event("billing", f"Transfer billed $25 (score={score})", "success")
+                        except Exception as e:
+                            log.warning(f"Transfer billing failed: {e}")
+                        break
+
+        background_tasks.add_task(_post_call)
+        orchestrator._log_event("voice", f"Call ended: {call_id} | score={score} | {outcome}", "success" if transferred else "info")
+        return {"received": True, "score": score, "outcome": outcome}
+
+    @app.post("/webhook/vapi/transfer-requested")
+    async def vapi_transfer_requested(request):
+        from fastapi import Request
+        payload = await request.json()
+        call_id = payload.get("callId", "")
+        orchestrator._log_event("voice", f"Warm transfer requested: {call_id}", "success")
+        return {"received": True, "action": "transfer"}
+
+    @app.get("/voice/assistant")
+    async def get_voice_assistant():
+        return {
+            "vapi_configured": bool(VAPI_KEY),
+            "twilio_configured": bool(TWILIO_PHONE),
+            "elevenlabs_configured": bool(ELEVENLABS_VID),
+            "assistant_id": _vapi_assistant_id_store["id"],
+        }
+
+    # ══════════════════════════════════════════════════════════════════════
+    # MORNING BRIEF (P9)
+    # ══════════════════════════════════════════════════════════════════════
+
+    class MorningBriefRequest(BaseModel):
+        email: str
+        user_name: str = "there"
+
+    @app.post("/heartbeat/morning-brief")
+    async def send_morning_brief(req: MorningBriefRequest, background_tasks: BackgroundTasks):
+        """Generate and send the 6am morning brief via Claude + SendGrid."""
+        async def _run():
+            import anthropic, asyncio as aio
+            from core.metaclaw import load_user_memory, build_user_context, inject_memory
+
+            sendgrid_key = orchestrator.config.sendgrid_api_key
+            if not sendgrid_key or not orchestrator.config.anthropic_api_key:
+                log.warning("Morning brief skipped — missing SENDGRID_API_KEY or ANTHROPIC_API_KEY")
+                return
+
+            # Get top qualified leads
+            leads = sorted(
+                [l for l in orchestrator.leads_db.values() if l.ai_score],
+                key=lambda l: l.ai_score or 0, reverse=True
+            )[:5]
+
+            user_memory = await load_user_memory(req.email)
+
+            # Build brief content with Claude
+            leads_text = "\n".join([
+                f"- {l.first_name} {l.last_name} ({l.company_name or 'unknown company'}): score {l.ai_score}/100. {l.ai_score_reasoning or ''}"
+                for l in leads
+            ]) or "No leads found yet — agents are still running."
+
+            user_ctx = build_user_context(user_memory, {
+                "total": len(orchestrator.leads_db),
+                "qualified": sum(1 for l in orchestrator.leads_db.values() if l.is_qualified),
+                "avg_score": 0,
+            })
+
+            brief_prompt = f"""{user_ctx}
+
+You are writing a personalized morning brief email for a P&C insurance agent using LeadOS.
+Keep it concise, data-first, and action-oriented. Write in plain text (no markdown).
+
+Top leads today:
+{leads_text}
+
+Write a brief (4-6 sentences) morning summary covering:
+1. How many leads were found overnight and the top score
+2. The single highest-priority lead and why
+3. One recommended action for today
+4. An encouraging, professional sign-off
+
+Do not use bullet points. Write in paragraph form. Address the agent as "{req.user_name}"."""
+
+            try:
+                client = anthropic.Anthropic(api_key=orchestrator.config.anthropic_api_key)
+                response = await aio.to_thread(
+                    client.messages.create,
+                    model="claude-sonnet-4-20250514",
+                    max_tokens=400,
+                    messages=[{"role": "user", "content": brief_prompt}],
+                )
+                brief_text = response.content[0].text.strip()
+            except Exception as e:
+                log.warning(f"Claude brief gen failed: {e}")
+                brief_text = f"Good morning, {req.user_name}! Your LeadOS agents ran overnight and found {len(leads)} qualified leads. Log in to review your top opportunities and take action today."
+
+            # Build HTML email
+            leads_html = "".join([
+                f"""<tr>
+                  <td style='padding:10px 14px;font-family:monospace;font-size:12px;color:#f0f4ff'>
+                    {l.first_name} {l.last_name}</td>
+                  <td style='padding:10px 14px;font-size:11px;color:#5a7099'>
+                    {l.company_name or '—'}</td>
+                  <td style='padding:10px 14px;font-weight:700;color:{"#00ff88" if (l.ai_score or 0) >= 75 else "#ffaa00"}'>
+                    {l.ai_score}/100</td>
+                  <td style='padding:10px 14px;font-size:10px;color:#5a7099'>
+                    {"✅ QUALIFIED" if l.is_qualified else "📋 NURTURE"}</td>
+                </tr>"""
+                for l in leads
+            ]) or "<tr><td colspan='4' style='padding:12px 14px;color:#5a7099;font-size:11px'>No leads yet — agents are running now.</td></tr>"
+
+            date_str = datetime.utcnow().strftime("%A, %B %-d")
+            html_body = f"""<html><body style="background:#050810;color:#f0f4ff;font-family:'DM Mono',monospace;padding:32px;max-width:600px;margin:auto">
+  <div style="margin-bottom:20px;display:flex;align-items:center;gap:10px">
+    <span style="background:#00ff88;color:#000;font-weight:900;font-family:sans-serif;font-size:16px;padding:6px 12px;border-radius:8px">L</span>
+    <span style="font-family:sans-serif;font-size:18px;font-weight:900">LeadOS <span style="color:#5a7099;font-size:12px;font-weight:400">Morning Brief</span></span>
+  </div>
+  <div style="font-size:11px;color:#5a7099;margin-bottom:20px">☀️ &nbsp;{date_str} · 6:00 AM CST</div>
+  <p style="font-size:13px;line-height:1.8;color:#d0d8f0;margin-bottom:24px;white-space:pre-line">{brief_text}</p>
+  <table style="width:100%;border-collapse:collapse;background:#0c1120;border-radius:10px;overflow:hidden;margin-bottom:24px">
+    <thead><tr style="background:#111827">
+      <th style="padding:10px 14px;text-align:left;font-size:9px;color:#5a7099;letter-spacing:1px;text-transform:uppercase">Name</th>
+      <th style="padding:10px 14px;text-align:left;font-size:9px;color:#5a7099;letter-spacing:1px;text-transform:uppercase">Company</th>
+      <th style="padding:10px 14px;text-align:left;font-size:9px;color:#5a7099;letter-spacing:1px;text-transform:uppercase">Score</th>
+      <th style="padding:10px 14px;text-align:left;font-size:9px;color:#5a7099;letter-spacing:1px;text-transform:uppercase">Status</th>
+    </tr></thead>
+    <tbody>{leads_html}</tbody>
+  </table>
+  <a href="https://tryleados.com/leadOS-dashboard.html"
+     style="display:inline-block;background:#00ff88;color:#000;font-weight:700;padding:12px 24px;border-radius:8px;text-decoration:none;font-family:sans-serif;font-size:13px">
+    View Full Dashboard →
+  </a>
+  <p style="color:#2d3f5a;font-size:10px;margin-top:28px">
+    LeadOS · Austin, TX · <a href="https://tryleados.com" style="color:#2d3f5a">tryleados.com</a>
+    · <a href="https://tryleados.com/unsubscribe" style="color:#2d3f5a">Unsubscribe</a>
+  </p>
+</body></html>"""
+
+            try:
+                import httpx
+                resp = httpx.post(
+                    "https://api.sendgrid.com/v3/mail/send",
+                    headers={"Authorization": f"Bearer {sendgrid_key}", "Content-Type": "application/json"},
+                    json={
+                        "personalizations": [{"to": [{"email": req.email}]}],
+                        "from": {"email": orchestrator.config.outreach_from_email, "name": "LeadOS"},
+                        "subject": f"☀️ Your LeadOS Brief — {len(leads)} leads ready · {date_str}",
+                        "content": [{"type": "text/html", "value": html_body}],
+                    },
+                    timeout=10,
+                )
+                if resp.status_code == 202:
+                    log.info(f"Morning brief sent to {req.email}")
+                    orchestrator._log_event("heartbeat", f"Morning brief sent to {req.email}", "success")
+                else:
+                    log.warning(f"SendGrid error {resp.status_code}: {resp.text[:200]}")
+            except Exception as e:
+                log.warning(f"Morning brief send failed: {e}")
+
+        background_tasks.add_task(_run)
+        return {"status": "queued", "email": req.email}
+
+    @app.post("/heartbeat/trigger")
+    async def manual_heartbeat(background_tasks: BackgroundTasks):
+        """Manual trigger for testing heartbeat actions."""
+        leads = list(orchestrator.leads_db.values())
+        qualified = [l for l in leads if l.is_qualified]
+        orchestrator._log_event("heartbeat", f"Manual trigger — {len(qualified)} qualified leads", "info")
+        return {
+            "status": "triggered",
+            "total_leads": len(leads),
+            "qualified_leads": len(qualified),
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+    # ══════════════════════════════════════════════════════════════════════
+    # CONTENT PIPELINE (P19)
+    # ══════════════════════════════════════════════════════════════════════
+
+    class ContentPipelineRequest(BaseModel):
+        template_key: str = "lone_wolf_story"  # lone_wolf_story | lead_tip | transfer_proof
+
+    @app.post("/content/generate")
+    async def generate_content(req: ContentPipelineRequest, background_tasks: BackgroundTasks):
+        """Run ElevenLabs + HeyGen content pipeline for a given template."""
+        leads = list(orchestrator.leads_db.values())
+        lead_stats = {
+            "total": len(leads),
+            "transfers": sum(1 for l in leads if l.is_qualified),
+        }
+
+        async def _run():
+            from core.content_pipeline import run_content_pipeline
+            result = await run_content_pipeline(
+                template_key=req.template_key,
+                lead_stats=lead_stats,
+                anthropic_key=orchestrator.config.anthropic_api_key,
+                elevenlabs_key=os.getenv("ELEVENLABS_API_KEY", ""),
+                elevenlabs_voice_id=os.getenv("ELEVENLABS_VOICE_ID", ""),
+                heygen_key=os.getenv("HEYGEN_API_KEY", ""),
+                heygen_avatar_id=os.getenv("HEYGEN_AVATAR_ID", ""),
+            )
+            orchestrator._log_event("content", f"Pipeline complete: template={req.template_key}", "success")
+            return result
+
+        background_tasks.add_task(_run)
+        return {"status": "pipeline_started", "template": req.template_key, "lead_stats": lead_stats}
+
+    @app.get("/content/templates")
+    async def list_content_templates():
+        """List available content templates."""
+        from core.content_pipeline import CONTENT_TEMPLATES
+        return {
+            "templates": [
+                {"key": k, "hook": v["hook"], "duration_seconds": v["duration"]}
+                for k, v in CONTENT_TEMPLATES.items()
+            ]
+        }
+
     # ── Start ─────────────────────────────────────────────────────────────
 
     cfg = uvicorn.Config(app=app, host=host, port=port, log_level="warning")
