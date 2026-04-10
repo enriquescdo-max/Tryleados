@@ -540,6 +540,20 @@ nav{
         <div style="margin-top:8px;font-size:9px;color:var(--muted);line-height:1.7">
           ⚡ LeadOS handles <strong style="color:var(--text)">all infrastructure</strong> — servers, AI API costs, email delivery, data storage. Your $299/mo covers everything. Your margin is genuinely $1,191/mo at 10 users.
         </div>
+
+        <!-- TCPA Consent -->
+        <div id="tcpaBlock" style="margin-top:20px;padding:16px 18px;background:rgba(0,255,136,0.04);border:1px solid rgba(0,255,136,0.15);border-radius:10px">
+          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer">
+            <input type="checkbox" id="tcpaConsent" style="margin-top:2px;accent-color:var(--accent);width:14px;height:14px;flex-shrink:0" />
+            <span style="font-size:9px;color:var(--muted);line-height:1.7">
+              By checking this box, I consent to receive autodialed or pre-recorded calls and text messages from LeadOS at the phone number provided above. I understand consent is not a condition of purchase. Message &amp; data rates may apply. Reply STOP to opt out. View our
+              <a href="/leadOS-landing-page.html#privacy" style="color:var(--accent);text-decoration:none">Privacy Policy</a>.
+            </span>
+          </label>
+          <div id="tcpaError" style="display:none;margin-top:8px;font-size:9px;color:#ff4d4d">
+            ⚠ You must agree to the terms above to continue.
+          </div>
+        </div>
       </div>
 
       <!-- STEP 5: Launch -->
@@ -642,7 +656,16 @@ function goToStep(n) {
 }
 
 function nextStep() {
+  // TCPA gate: step 4 → step 5 requires consent
   if (currentStep === totalSteps - 1) {
+    const cb = document.getElementById('tcpaConsent');
+    const err = document.getElementById('tcpaError');
+    if (cb && !cb.checked) {
+      err.style.display = 'block';
+      cb.closest('label').scrollIntoView({behavior:'smooth', block:'nearest'});
+      return;
+    }
+    if (err) err.style.display = 'none';
     generateFinalConfig();
   }
   if (currentStep < totalSteps) goToStep(currentStep + 1);
