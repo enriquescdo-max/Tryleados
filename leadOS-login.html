@@ -99,6 +99,14 @@ input::placeholder{color:#2d3f5a}
   <input type="password" id="pw" placeholder="••••••••" onkeydown="if(event.key==='Enter')emailLogin()"/>
   <div class="forgot"><a href="#" onclick="forgotPw();return false">Forgot password?</a></div>
 
+  <!-- TCPA Consent (P5) — shown only on signup, hidden on sign-in -->
+  <div id="tcpaWrap" style="display:none;margin-top:12px;background:rgba(0,102,255,0.06);border:1px solid rgba(0,102,255,0.18);border-radius:8px;padding:10px 12px">
+    <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:9px;color:#8aa0c4;line-height:1.6;text-transform:none;letter-spacing:0;margin:0">
+      <input type="checkbox" id="tcpaConsent" style="width:14px;height:14px;flex-shrink:0;margin-top:2px;accent-color:#00ff88">
+      <span>I consent to receive automated calls and text messages from LeadOS and its clients regarding insurance and financial services. Message &amp; data rates may apply. Reply STOP to opt out. <a href="/privacy" style="color:#6699ff">Privacy Policy</a>.</span>
+    </label>
+  </div>
+
   <button class="signin-btn" id="signBtn" onclick="emailLogin()">Sign In →</button>
   <button class="demo-btn" onclick="demoLogin()">⚡ Demo Login — try without an account</button>
 

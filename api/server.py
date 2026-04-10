@@ -825,6 +825,156 @@ Keep responses concise (3-5 sentences max) and action-oriented."""
         return {"status": "queued", "email": req.email}
 
     # ══════════════════════════════════════════════════════════════════════
+    # VOICE AGENT — VAPI + TWILIO (P11-P15)
+    # ══════════════════════════════════════════════════════════════════════
+
+    VAPI_KEY       = os.getenv("VAPI_API_KEY", "")
+    ELEVENLABS_VID = os.getenv("ELEVENLABS_VOICE_ID", "")
+    TWILIO_PHONE   = os.getenv("TWILIO_PHONE_NUMBER", "")
+
+    # Cached assistant ID (created once per process)
+    _vapi_assistant_id_store: Dict[str, Optional[str]] = {"id": None}
+
+    async def _get_or_create_vapi_assistant(transfer_phone: str = "") -> Optional[str]:
+        if _vapi_assistant_id_store["id"]:
+            return _vapi_assistant_id_store["id"]
+        if not VAPI_KEY:
+            return None
+        from core.voice_agent import build_vapi_assistant_config, create_vapi_assistant
+        config = build_vapi_assistant_config(
+            elevenlabs_voice_id=ELEVENLABS_VID,
+            transfer_phone=transfer_phone,
+        )
+        aid = await create_vapi_assistant(VAPI_KEY, config)
+        _vapi_assistant_id_store["id"] = aid
+        if aid:
+            orchestrator._log_event("voice", f"Vapi assistant created: {aid}", "success")
+        return aid
+
+    class CallLeadRequest(BaseModel):
+        lead_id: str
+        override_phone: Optional[str] = None
+
+    @app.post("/voice/call")
+    async def call_lead(req: CallLeadRequest):
+        """Initiate an outbound Vapi call to a lead."""
+        lead = orchestrator.leads_db.get(req.lead_id)
+        if not lead:
+            raise HTTPException(status_code=404, detail=f"Lead {req.lead_id} not found")
+
+        lead_phone = req.override_phone or lead.phone
+        if not lead_phone:
+            raise HTTPException(status_code=400, detail="Lead has no phone number")
+
+        if not VAPI_KEY:
+            return {"status": "skipped", "reason": "VAPI_API_KEY not configured — set in Railway"}
+        if not TWILIO_PHONE:
+            return {"status": "skipped", "reason": "TWILIO_PHONE_NUMBER not configured — set in Railway"}
+
+        # Get transfer phone from any active voice config
+        transfer_phone = next(
+            (cfg["phone_number"] for cfg in _voice_configs.values()
+             if cfg.get("enabled") and cfg.get("phone_number")),
+            ""
+        )
+
+        assistant_id = await _get_or_create_vapi_assistant(transfer_phone)
+        if not assistant_id:
+            raise HTTPException(status_code=503, detail="Failed to initialize Vapi assistant")
+
+        from core.voice_agent import initiate_outbound_call
+        call_id = await initiate_outbound_call(
+            vapi_key=VAPI_KEY,
+            assistant_id=assistant_id,
+            lead_phone=lead_phone,
+            twilio_phone=TWILIO_PHONE,
+            lead_name=f"{lead.first_name or ''} {lead.last_name or ''}".strip(),
+            metadata={"lead_id": req.lead_id, "ai_score": str(lead.ai_score or 0)},
+        )
+        if call_id:
+            orchestrator._log_event("voice", f"Call initiated → {lead.first_name} ({lead_phone})", "success")
+            return {"status": "call_initiated", "call_id": call_id, "lead_id": req.lead_id}
+        raise HTTPException(status_code=503, detail="Vapi call initiation failed")
+
+    @app.post("/webhook/vapi/call-started")
+    async def vapi_call_started(request):
+        from fastapi import Request
+        payload = await request.json()
+        call_id = payload.get("callId") or payload.get("id", "")
+        lead_id = (payload.get("metadata") or {}).get("lead_id", "")
+        orchestrator._log_event("voice", f"Call started: {call_id} | lead={lead_id}", "info")
+        return {"received": True}
+
+    @app.post("/webhook/vapi/call-ended")
+    async def vapi_call_ended(request, background_tasks: BackgroundTasks):
+        from fastapi import Request
+        payload = await request.json()
+        call   = payload.get("call", payload)
+        call_id= call.get("id", "")
+        meta   = call.get("metadata") or {}
+        lead_id= meta.get("lead_id", "")
+        duration   = call.get("durationSeconds", 0) or 0
+        transcript = call.get("transcript", "") or ""
+        recording  = call.get("recordingUrl", "") or ""
+
+        from core.voice_agent import score_call_transcript, log_call_to_supabase
+
+        scored = score_call_transcript(transcript)
+        score  = scored["score"]
+        outcome= scored["outcome"]
+
+        lead = orchestrator.leads_db.get(lead_id)
+        score_before = float(lead.ai_score or 0) if lead else 0.0
+        if lead:
+            lead.ai_score = score
+            lead.ai_score_reasoning = f"Voice qualified: {outcome} (score {score})"
+
+        transferred = (outcome == "transfer")
+
+        async def _post_call():
+            await log_call_to_supabase(
+                call_id, lead_id, duration, score_before, score,
+                transferred, recording, transcript, outcome,
+            )
+            # Bill $25 per transfer (P14)
+            if transferred and STRIPE_SECRET_KEY:
+                for email, sub in _subscriptions.items():
+                    if sub.get("status") == "active" and sub.get("stripe_customer_id"):
+                        try:
+                            import stripe
+                            stripe.api_key = STRIPE_SECRET_KEY
+                            stripe.InvoiceItem.create(
+                                customer=sub["stripe_customer_id"],
+                                amount=2500, currency="usd",
+                                description=f"Qualified transfer — {lead.first_name if lead else 'lead'} (score {score})",
+                            )
+                            orchestrator._log_event("billing", f"Transfer billed $25 (score={score})", "success")
+                        except Exception as e:
+                            log.warning(f"Transfer billing failed: {e}")
+                        break
+
+        background_tasks.add_task(_post_call)
+        orchestrator._log_event("voice", f"Call ended: {call_id} | score={score} | {outcome}", "success" if transferred else "info")
+        return {"received": True, "score": score, "outcome": outcome}
+
+    @app.post("/webhook/vapi/transfer-requested")
+    async def vapi_transfer_requested(request):
+        from fastapi import Request
+        payload = await request.json()
+        call_id = payload.get("callId", "")
+        orchestrator._log_event("voice", f"Warm transfer requested: {call_id}", "success")
+        return {"received": True, "action": "transfer"}
+
+    @app.get("/voice/assistant")
+    async def get_voice_assistant():
+        return {
+            "vapi_configured": bool(VAPI_KEY),
+            "twilio_configured": bool(TWILIO_PHONE),
+            "elevenlabs_configured": bool(ELEVENLABS_VID),
+            "assistant_id": _vapi_assistant_id_store["id"],
+        }
+
+    # ══════════════════════════════════════════════════════════════════════
     # MORNING BRIEF (P9)
     # ══════════════════════════════════════════════════════════════════════
 
@@ -970,6 +1120,50 @@ Do not use bullet points. Write in paragraph form. Address the agent as "{req.us
             "total_leads": len(leads),
             "qualified_leads": len(qualified),
             "timestamp": datetime.utcnow().isoformat(),
+        }
+
+    # ══════════════════════════════════════════════════════════════════════
+    # CONTENT PIPELINE (P19)
+    # ══════════════════════════════════════════════════════════════════════
+
+    class ContentPipelineRequest(BaseModel):
+        template_key: str = "lone_wolf_story"  # lone_wolf_story | lead_tip | transfer_proof
+
+    @app.post("/content/generate")
+    async def generate_content(req: ContentPipelineRequest, background_tasks: BackgroundTasks):
+        """Run ElevenLabs + HeyGen content pipeline for a given template."""
+        leads = list(orchestrator.leads_db.values())
+        lead_stats = {
+            "total": len(leads),
+            "transfers": sum(1 for l in leads if l.is_qualified),
+        }
+
+        async def _run():
+            from core.content_pipeline import run_content_pipeline
+            result = await run_content_pipeline(
+                template_key=req.template_key,
+                lead_stats=lead_stats,
+                anthropic_key=orchestrator.config.anthropic_api_key,
+                elevenlabs_key=os.getenv("ELEVENLABS_API_KEY", ""),
+                elevenlabs_voice_id=os.getenv("ELEVENLABS_VOICE_ID", ""),
+                heygen_key=os.getenv("HEYGEN_API_KEY", ""),
+                heygen_avatar_id=os.getenv("HEYGEN_AVATAR_ID", ""),
+            )
+            orchestrator._log_event("content", f"Pipeline complete: template={req.template_key}", "success")
+            return result
+
+        background_tasks.add_task(_run)
+        return {"status": "pipeline_started", "template": req.template_key, "lead_stats": lead_stats}
+
+    @app.get("/content/templates")
+    async def list_content_templates():
+        """List available content templates."""
+        from core.content_pipeline import CONTENT_TEMPLATES
+        return {
+            "templates": [
+                {"key": k, "hook": v["hook"], "duration_seconds": v["duration"]}
+                for k, v in CONTENT_TEMPLATES.items()
+            ]
         }
 
     # ── Start ─────────────────────────────────────────────────────────────

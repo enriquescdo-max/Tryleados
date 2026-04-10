@@ -215,10 +215,18 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
         <div class="info-box">
           💳 After clicking below, you'll complete payment via Stripe. Then you'll build your lead engine — takes 2 minutes.
         </div>
+
+        <!-- P5: TCPA Consent -->
+        <div style="background:rgba(0,102,255,0.06);border:1px solid rgba(0,102,255,0.18);border-radius:8px;padding:10px 14px;margin-top:12px">
+          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:9px;color:#8aa0c4;line-height:1.6">
+            <input type="checkbox" id="tcpaConsent" style="width:14px;height:14px;flex-shrink:0;margin-top:2px;accent-color:#00ff88">
+            <span>I consent to receive automated calls and text messages from LeadOS and its clients regarding insurance and financial services. Message &amp; data rates may apply. Reply STOP to opt out. <a href="/privacy" style="color:#6699ff">Privacy Policy</a>.</span>
+          </label>
+        </div>
       </div>
       <div class="card-footer">
         <span style="font-size:9px;color:var(--muted)">Step 1 of 5</span>
-        <button class="btn btn-primary" onclick="startCheckout()">
+        <button class="btn btn-primary" id="checkoutBtn" onclick="startCheckout()">
           Start for $49/month →
         </button>
       </div>
@@ -445,7 +453,15 @@ function selectIndustry(id, el) {
 
 // ── Step 1: Checkout ────────────────────────────────────────────────────────
 async function startCheckout() {
-  const btn = document.querySelector('#step1 .btn-primary');
+  // Validate TCPA consent before proceeding
+  const tcpa = document.getElementById('tcpaConsent');
+  if (tcpa && !tcpa.checked) {
+    tcpa.closest('div').style.borderColor = 'var(--err)';
+    tcpa.focus();
+    return;
+  }
+
+  const btn = document.getElementById('checkoutBtn');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>Starting checkout...';
 
