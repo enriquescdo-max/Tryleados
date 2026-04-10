@@ -72,7 +72,11 @@ class LeadOSConfig:
             clearbit_api_key=os.getenv("CLEARBIT_API_KEY"),
             linkedin_cookie=os.getenv("LINKEDIN_SESSION_COOKIE"),
             supabase_url=os.getenv("SUPABASE_URL", ""),
-            supabase_service_key=os.getenv("SUPABASE_SERVICE_KEY", ""),
+            supabase_service_key=(
+                os.getenv("SUPABASE_SERVICE_KEY") or
+                os.getenv("SUPABASE_SERVICE_ROLE_KEY") or
+                os.getenv("SUPABASE_ANON_KEY", "")
+            ),
             sendgrid_api_key=os.getenv("SENDGRID_API_KEY"),
             min_qualify_score=int(os.getenv("MIN_QUALIFY_SCORE", "70")),
             max_concurrent_agents=int(os.getenv("MAX_CONCURRENT_AGENTS", "10")),
