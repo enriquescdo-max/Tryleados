@@ -573,6 +573,88 @@ Return ONLY valid JSON with keys "subject" and "body". No markdown, no explanati
         return _subscriptions.get(email, {"status": "none", "tier": None})
 
     # ══════════════════════════════════════════════════════════════════════
+    # SUPPORT CHATBOT
+    # ══════════════════════════════════════════════════════════════════════
+
+    SUPPORT_SYSTEM_PROMPT = """You are the LeadOS support agent. You know everything about LeadOS:
+the product, pricing, features, how agents work, billing, voice transfers, and common troubleshooting.
+
+Pricing:
+- Lone Wolf: $49/month (50 leads, 1 vertical, no team seats)
+- Team: $149/month (500 leads, 3 verticals, 3 seats)
+- White Label: $399/month (unlimited leads, all verticals, custom branding)
+- Voice transfers: $25 per qualified transfer (Lone Wolf), $18 (Team)
+
+Key features:
+- 8 AI agents: Crawler, LinkedIn, Enricher, Email Verifier, Signal Detector, Qualifier, CRM Sync, Outreach
+- Claude AI scores leads 0-100 against the user's ICP
+- Leads scoring 75+ trigger automatic voice qualification calls via Aria (ElevenLabs voice)
+- Qualified leads warm-transfer directly to the agent's phone via Twilio
+- CRM integrations: HubSpot, Salesforce, Pipedrive, GoHighLevel
+- Morning brief email delivered at 6am CST with top leads
+
+If you cannot answer something, say: "Let me flag this for Enrique — he'll respond within 24 hours."
+Never make up pricing, features, or capabilities that don't exist.
+Keep responses concise (3-5 sentences max) and action-oriented."""
+
+    class ChatMessageRequest(BaseModel):
+        message: str
+        session_id: str = ""
+        history: List[Dict] = []
+        email: str = ""
+
+    @app.post("/chat/message")
+    async def chat_message(req: ChatMessageRequest):
+        """Support chatbot powered by Claude API with conversation history."""
+        if not orchestrator.config.anthropic_api_key:
+            return {"reply": "Chat is not available right now — ANTHROPIC_API_KEY not configured. Email support@tryleados.com for help."}
+
+        try:
+            import anthropic, asyncio
+
+            # Build messages array from history + new message
+            messages = []
+            for turn in req.history[-8:]:  # last 8 turns for context
+                role = turn.get("role", "user")
+                if role in ("user", "assistant"):
+                    messages.append({"role": role, "content": str(turn.get("content", ""))})
+
+            # Ensure last message is the current user input
+            if not messages or messages[-1].get("content") != req.message:
+                messages.append({"role": "user", "content": req.message})
+
+            client = anthropic.Anthropic(api_key=orchestrator.config.anthropic_api_key)
+            response = await asyncio.to_thread(
+                client.messages.create,
+                model="claude-sonnet-4-20250514",
+                max_tokens=512,
+                system=SUPPORT_SYSTEM_PROMPT,
+                messages=messages,
+            )
+            reply = response.content[0].text.strip()
+
+            # Persist to Supabase conversation_history if available
+            try:
+                from db import supabase_client
+                if supabase_client.is_ready() and req.email:
+                    for role, content in [("user", req.message), ("assistant", reply)]:
+                        await asyncio.to_thread(
+                            supabase_client.client.table("conversation_history").insert({
+                                "role": role, "content": content,
+                                "session_id": req.session_id or "anon",
+                            }).execute
+                        )
+            except Exception:
+                pass
+
+            orchestrator._log_event("chat", f"Chat response sent (session={req.session_id[:8]})", "info")
+            return {"reply": reply, "session_id": req.session_id}
+
+        except Exception as e:
+            log.error(f"Chat error: {e}")
+            return {"reply": "I'm having trouble right now. Please try again or email support@tryleados.com."}
+
+    # ══════════════════════════════════════════════════════════════════════
     # ONBOARDING
     # ══════════════════════════════════════════════════════════════════════
 
