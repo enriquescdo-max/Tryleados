@@ -166,11 +166,36 @@ class CrawlerAgent(BaseAgent):
         return signals[:5]
 
     async def _discover_urls_for_campaign(self, prompt: str) -> List[str]:
-        """Use heuristics (or AI) to find relevant URLs for a campaign."""
-        # In production this would use Claude to suggest URLs based on the prompt
+        """Use Claude to find relevant URLs to scrape based on the campaign prompt."""
+        try:
+            import anthropic, json, asyncio
+            client = anthropic.Anthropic(api_key=self.config.anthropic_api_key)
+            response = await asyncio.to_thread(
+                client.messages.create,
+                model="claude-sonnet-4-20250514",
+                max_tokens=400,
+                messages=[{"role": "user", "content": f"""You are a lead generation expert.
+Campaign goal: "{prompt}"
+
+Return a JSON array of 6 specific URLs to scrape for contact email addresses of people matching this description.
+Good sources: industry association member directories, local business directories (Yelp, BBB, YellowPages), state licensing lookup pages, LinkedIn company pages, conference/event attendee lists, NAIP/NAIC agent directories for insurance.
+
+Return ONLY a valid JSON array of URL strings. No explanation, no markdown."""}],
+            )
+            text = response.content[0].text.strip().replace("```json", "").replace("```", "").strip()
+            urls = json.loads(text)
+            valid = [u for u in urls if isinstance(u, str) and u.startswith("http")][:6]
+            if valid:
+                log.info(f"Claude discovered {len(valid)} URLs for campaign")
+                return valid
+        except Exception as e:
+            log.warning(f"Claude URL discovery failed ({e}) — using fallback URLs")
+
+        # Fallback: generic directories relevant to insurance/sales
         return [
-            "https://www.g2.com/categories/crm",
-            "https://www.ycombinator.com/companies",
+            "https://www.yellowpages.com/search?search_terms=insurance+agent&geo_location_terms=Texas",
+            "https://www.bbb.org/search?find_text=insurance+agent&find_loc=Texas",
+            "https://www.yelp.com/search?find_desc=insurance+agent&find_loc=Austin%2C+TX",
         ]
 
     def _dict_to_lead(self, data: Dict) -> Lead:

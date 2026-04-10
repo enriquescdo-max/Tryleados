@@ -52,8 +52,13 @@ class BaseAgent(ABC):
         return self.orchestrator.leads_db.get(lead_id)
 
     def save_lead(self, lead):
-        """Convenience: upsert a lead into the shared DB."""
+        """Upsert a lead into in-memory DB and persist to Supabase."""
         self.orchestrator.leads_db[lead.id] = lead
+        try:
+            from db import supabase_client
+            supabase_client.save_lead(lead.to_dict())
+        except Exception as e:
+            self.log.warning(f"Supabase persist failed for lead {lead.id}: {e}")
         return lead
 
     @property
