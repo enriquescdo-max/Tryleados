@@ -30,3 +30,6 @@ aiosmtplib>=3.0.0
 python-dotenv>=1.0.0
 tenacity>=8.2.0
 structlog>=24.0.0
+
+# Persistence
+supabase>=2.3.0

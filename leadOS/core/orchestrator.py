@@ -40,6 +40,12 @@ class AgentOrchestrator:
     async def initialize(self):
         """Instantiate and initialize all agents."""
         log.info("Initializing agent pool...")
+
+        # Boot Supabase and reload any leads that survived a previous run
+        from db import supabase_client
+        supabase_client.init(self.config.supabase_url, self.config.supabase_service_key)
+        if supabase_client.is_ready():
+            await self._load_leads_from_supabase(supabase_client)
         # Agents are imported lazily to avoid circular imports
         from agents.crawler_agent import CrawlerAgent
         from agents.linkedin_agent import LinkedInAgent
@@ -204,6 +210,39 @@ class AgentOrchestrator:
         })
         if len(self.event_log) > 1000:
             self.event_log = self.event_log[-500:]
+
+    async def _load_leads_from_supabase(self, supabase_client) -> None:
+        """Restore in-memory leads_db from Supabase on startup."""
+        import asyncio
+        rows = await asyncio.to_thread(supabase_client.load_leads)
+        for row in rows:
+            lead = Lead(
+                id=row["id"],
+                first_name=(row.get("name") or "").split(" ")[0],
+                last_name=" ".join((row.get("name") or "").split(" ")[1:]),
+                email=row.get("email"),
+                phone=row.get("phone"),
+                title=row.get("title", ""),
+                company_name=row.get("company", ""),
+                intent_signals=row.get("intent_signals") or [],
+                email_verified=row.get("email_verified"),
+                linkedin_url=row.get("linkedin_url"),
+                ai_score=row.get("ai_score"),
+                ai_score_reasoning=row.get("ai_score_reasoning"),
+            )
+            # Restore status
+            try:
+                lead.status = LeadStatus(row.get("status", "new"))
+            except ValueError:
+                pass
+            # Restore source
+            try:
+                from core.models import LeadSource
+                lead.source = LeadSource(row.get("source", "web_crawler"))
+            except ValueError:
+                pass
+            self.leads_db[lead.id] = lead
+        log.info(f"Restored {len(rows)} leads from Supabase into memory.")
 
     def _default_icp(self) -> ICPProfile:
         return ICPProfile(
