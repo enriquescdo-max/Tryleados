@@ -1,0 +1,42 @@
+{
+  "mcpServers": {
+    "leados-postgres": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres", "${LEADOS_DB_URL}"],
+      "description": "LeadOS PostgreSQL database — leads, scores, activity log"
+    },
+    "leados-hubspot": {
+      "command": "npx",
+      "args": ["-y", "@hubspot/mcp-server"],
+      "env": {
+        "HUBSPOT_ACCESS_TOKEN": "${HUBSPOT_ACCESS_TOKEN}"
+      },
+      "description": "HubSpot CRM — contact sync, deal stage updates"
+    },
+    "leados-search": {
+      "command": "npx",
+      "args": ["-y", "tavily-mcp-server"],
+      "env": {
+        "TAVILY_API_KEY": "${TAVILY_API_KEY}"
+      },
+      "description": "Tavily web search — trigger event research for Researcher agent"
+    },
+    "leados-email": {
+      "command": "npx",
+      "args": ["-y", "sendgrid-mcp-server"],
+      "env": {
+        "SENDGRID_API_KEY": "${SENDGRID_API_KEY}"
+      },
+      "description": "SendGrid — email delivery for Deliverer agent"
+    },
+    "leados-slack": {
+      "command": "npx",
+      "args": ["-y", "@slack/mcp-server"],
+      "env": {
+        "SLACK_BOT_TOKEN": "${SLACK_BOT_TOKEN}",
+        "SLACK_ALERT_CHANNEL": "${SLACK_ALERT_CHANNEL}"
+      },
+      "description": "Slack — human escalation for interested replies"
+    }
+  }
+}
