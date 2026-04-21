@@ -3,6 +3,7 @@ from supabase import create_client
 import os
 from services.apify_scraper import scrape_all_sources
 from services.enrichment import enrich_all_leads
+from services.hubspot import push_lead_to_hubspot
 from datetime import datetime
 
 router = APIRouter(prefix="/api/leads", tags=["leads"])
@@ -38,6 +39,13 @@ async def scrape_enrich_save():
                 "enriched_at": datetime.utcnow().isoformat()
             }).execute()
         print(f"[LeadOS] Done. {len(enriched_leads)} leads saved.")
+        for lead in enriched_leads:
+            try:
+                contact_id = await push_lead_to_hubspot(lead)
+                if contact_id:
+                    print(f"[HubSpot] Contact created: {contact_id}")
+            except Exception as hs_err:
+                print(f"[HubSpot] Error pushing lead: {hs_err}")
     except Exception as e:
         print(f"[LeadOS] Pipeline error: {e}")
 
