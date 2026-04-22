@@ -679,3 +679,16 @@ Claude Code reads it fresh on every session — no re-explaining needed.
 
 *LeadOS — Built by Enrique Saucedo | We Insure / PEAK6 | Austin, TX*
 *PEAK6 Trials Deadline: May 29, 2026*
+
+## GStack Skills Active
+Use /browse skill from gstack for all web browsing.
+Never use mcp__claude-in-chrome__* tools.
+
+Available skills:
+/office-hours - CEO mode: reframe problems before coding
+/plan - Eng Manager: lock architecture decisions
+/design-shotgun - Designer: catch AI slop in UI
+/review - Senior reviewer: find production bugs
+/ship - Release engineer: PR and deploy
+/qa - QA lead: browser testing
+/security - Security officer: OWASP audits
