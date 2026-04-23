@@ -23,19 +23,31 @@ from datetime import datetime, timedelta
 log = logging.getLogger("LeadOS.API")
 
 
+def build_routes(app, orchestrator):
+    """Register all routes onto an existing FastAPI app. Called from main.py."""
+    _register_routes(app, orchestrator)
+
+
 async def start_api_server(orchestrator, host="0.0.0.0", port=8000):
+    """Legacy entry point — kept for local dev."""
     try:
-        from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, Header, Request
+        from fastapi import FastAPI
         from fastapi.middleware.cors import CORSMiddleware
-        from pydantic import BaseModel
         import uvicorn
     except ImportError:
-        log.warning("FastAPI not installed. Run: pip install fastapi uvicorn pydantic")
         await asyncio.sleep(99999)
         return
-
     app = FastAPI(title="LeadOS API", version="2.1.0")
     app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+    _register_routes(app, orchestrator)
+    cfg = uvicorn.Config(app=app, host=host, port=port, log_level="warning")
+    server = uvicorn.Server(cfg)
+    await server.serve()
+
+
+def _register_routes(app, orchestrator):
+    from fastapi import HTTPException, BackgroundTasks, Depends, Header, Request
+    from pydantic import BaseModel
 
     # ── In-memory stores ──────────────────────────────────────────────────
     _sessions: Dict[str, Dict] = {}
@@ -1172,10 +1184,4 @@ Do not use bullet points. Write in paragraph form. Address the agent as "{req.us
             ]
         }
 
-    # ── Start ─────────────────────────────────────────────────────────────
-
-    cfg = uvicorn.Config(app=app, host=host, port=port, log_level="warning")
-    server = uvicorn.Server(cfg)
-    log.info(f"LeadOS API v2.1 running → http://{host}:{port}")
-    log.info(f"Swagger docs         → http://{host}:{port}/docs")
-    await server.serve()
+    log.info("Routes registered.")
