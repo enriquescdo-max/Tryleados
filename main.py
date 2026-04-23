@@ -5,7 +5,6 @@ LeadOS - Ultimate Lead Intelligence OS
 import asyncio
 import logging
 import os
-import sys
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,34 +15,32 @@ logging.basicConfig(
 )
 log = logging.getLogger("LeadOS")
 
-# Boot orchestrator at module level so uvicorn main:app works
+_boot_error = None
+_orchestrator = None
+
 try:
     from core.config import LeadOSConfig
     from core.orchestrator import AgentOrchestrator
     _config = LeadOSConfig.from_env()
     _orchestrator = AgentOrchestrator(_config)
     log.info("Orchestrator created OK")
-except Exception as _boot_err:
-    log.error(f"BOOT ERROR: {_boot_err}", exc_info=True)
-    # Still define app so uvicorn doesn't complain — returns 503 on every route
-    from fastapi import FastAPI
-    app = FastAPI()
-
-    @app.get("/{path:path}")
-    async def broken(path: str):
-        return {"status": "boot_error", "error": str(_boot_err)}
-
-    sys.exit(1)
+except Exception as e:
+    _boot_error = e
+    log.error(f"BOOT ERROR: {e}", exc_info=True)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    log.info("LeadOS starting agents...")
-    await _orchestrator.initialize()
-    log.info("All agents ready.")
-    task = asyncio.create_task(_orchestrator.run_forever())
-    yield
-    task.cancel()
+    if _orchestrator:
+        log.info("LeadOS starting agents...")
+        await _orchestrator.initialize()
+        log.info("All agents ready.")
+        task = asyncio.create_task(_orchestrator.run_forever())
+        yield
+        task.cancel()
+    else:
+        log.error(f"Skipping agent init — boot failed: {_boot_error}")
+        yield
 
 
 app = FastAPI(title="LeadOS", version="3.0", lifespan=lifespan)
@@ -54,12 +51,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-try:
-    from api.server import build_routes
-    build_routes(app, _orchestrator)
-    log.info("Routes registered.")
-except Exception as _route_err:
-    log.error(f"ROUTE ERROR: {_route_err}", exc_info=True)
+
+@app.get("/health")
+async def health():
+    if _boot_error:
+        return {"status": "boot_error", "error": str(_boot_error)}
+    return {
+        "status": "ok",
+        "version": "3.0",
+        "agents": len(_orchestrator.agents) if _orchestrator else 0,
+    }
+
+
+if _orchestrator:
+    try:
+        from api.server import build_routes
+        build_routes(app, _orchestrator)
+        log.info("Routes registered.")
+    except Exception as e:
+        log.error(f"ROUTE ERROR: {e}", exc_info=True)
 
 
 if __name__ == "__main__":
