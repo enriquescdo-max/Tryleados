@@ -1,36 +1,42 @@
-"""
-LeadOS - Ultimate Lead Intelligence OS
-AI Agent Infrastructure Entry Point
-"""
-
+"""LeadOS"""
+import os
 import asyncio
 import logging
-from core.orchestrator import AgentOrchestrator
-from core.config import LeadOSConfig
-from api.server import start_api_server
+from fastapi import FastAPI
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(name)s] %(levelname)s: %(message)s"
-)
+logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("LeadOS")
+log.info("=== LEADOS leadOS/main.py LOADING ===")
+
+app = FastAPI(title="LeadOS", version="2.1.0")
+log.info(f"=== APP DEFINED: {app} ===")
 
 
-async def main():
-    log.info("🚀 LeadOS Agent Infrastructure starting...")
+@app.get("/health")
+async def health():
+    return {"status": "ok", "version": "2.1.0"}
 
-    config = LeadOSConfig.from_env()
-    orchestrator = AgentOrchestrator(config)
 
-    await orchestrator.initialize()
-    log.info("✅ All agents initialized and ready.")
+@app.on_event("startup")
+async def startup():
+    log.info("=== STARTUP EVENT FIRED ===")
+    try:
+        from core.config import LeadOSConfig
+        from core.orchestrator import AgentOrchestrator
+        from api.server import build_routes
 
-    # Start API server + agent loop concurrently
-    await asyncio.gather(
-        start_api_server(orchestrator, host="0.0.0.0", port=8000),
-        orchestrator.run_forever(),
-    )
+        cfg = LeadOSConfig.from_env()
+        orch = AgentOrchestrator(cfg)
+        await orch.initialize()
+        build_routes(app, orch)
+        asyncio.create_task(orch.run_forever())
+        app.state.orchestrator = orch
+        log.info("=== ALL AGENTS READY ===")
+    except Exception as e:
+        log.error(f"=== STARTUP FAILED: {e} ===", exc_info=True)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0",
+                port=int(os.environ.get("PORT", 8000)))
