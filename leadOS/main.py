@@ -29,11 +29,20 @@ async def startup():
 
         cfg = LeadOSConfig.from_env()
         orch = AgentOrchestrator(cfg)
-        await orch.initialize()
+        # Register routes immediately so /health is available before agents init
         build_routes(app, orch)
-        asyncio.create_task(orch.run_forever())
         app.state.orchestrator = orch
-        log.info("=== ALL AGENTS READY ===")
+        log.info("=== ROUTES REGISTERED — agents booting in background ===")
+
+        async def _boot_agents():
+            try:
+                await orch.initialize()
+                asyncio.create_task(orch.run_forever())
+                log.info("=== ALL AGENTS READY ===")
+            except Exception as e:
+                log.error(f"=== AGENT BOOT FAILED: {e} ===", exc_info=True)
+
+        asyncio.create_task(_boot_agents())
     except Exception as e:
         log.error(f"=== STARTUP FAILED: {e} ===", exc_info=True)
 
