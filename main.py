@@ -1,16 +1,14 @@
 """
 LeadOS - Ultimate Lead Intelligence OS
-AI Agent Infrastructure Entry Point
 """
 
 import asyncio
 import logging
 import os
+import sys
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from core.orchestrator import AgentOrchestrator
-from core.config import LeadOSConfig
 
 logging.basicConfig(
     level=logging.INFO,
@@ -18,21 +16,34 @@ logging.basicConfig(
 )
 log = logging.getLogger("LeadOS")
 
-config = LeadOSConfig.from_env()
-orchestrator = AgentOrchestrator(config)
-_agent_task = None
+# Boot orchestrator at module level so uvicorn main:app works
+try:
+    from core.config import LeadOSConfig
+    from core.orchestrator import AgentOrchestrator
+    _config = LeadOSConfig.from_env()
+    _orchestrator = AgentOrchestrator(_config)
+    log.info("Orchestrator created OK")
+except Exception as _boot_err:
+    log.error(f"BOOT ERROR: {_boot_err}", exc_info=True)
+    # Still define app so uvicorn doesn't complain — returns 503 on every route
+    from fastapi import FastAPI
+    app = FastAPI()
+
+    @app.get("/{path:path}")
+    async def broken(path: str):
+        return {"status": "boot_error", "error": str(_boot_err)}
+
+    sys.exit(1)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global _agent_task
-    log.info("LeadOS starting...")
-    await orchestrator.initialize()
-    log.info("All agents initialized.")
-    _agent_task = asyncio.create_task(orchestrator.run_forever())
+    log.info("LeadOS starting agents...")
+    await _orchestrator.initialize()
+    log.info("All agents ready.")
+    task = asyncio.create_task(_orchestrator.run_forever())
     yield
-    if _agent_task:
-        _agent_task.cancel()
+    task.cancel()
 
 
 app = FastAPI(title="LeadOS", version="3.0", lifespan=lifespan)
@@ -43,10 +54,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount all routes from api/server by importing the router builder
-from api.server import build_routes
-build_routes(app, orchestrator)
+try:
+    from api.server import build_routes
+    build_routes(app, _orchestrator)
+    log.info("Routes registered.")
+except Exception as _route_err:
+    log.error(f"ROUTE ERROR: {_route_err}", exc_info=True)
+
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=int(os.environ.get("PORT", 8000)), reload=False)
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 8000)),
+        reload=False,
+    )
