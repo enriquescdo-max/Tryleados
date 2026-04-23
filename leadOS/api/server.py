@@ -26,10 +26,7 @@ log = logging.getLogger("LeadOS.API")
 def build_routes(app, orchestrator):
     """Register all API routes onto an existing FastAPI app instance."""
     from fastapi import HTTPException, BackgroundTasks, Depends, Header, Request
-    from fastapi.middleware.cors import CORSMiddleware
     from pydantic import BaseModel
-
-    app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
     # ── In-memory stores ──────────────────────────────────────────────────
     _sessions: Dict[str, Dict] = {}
