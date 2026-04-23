@@ -1,82 +1,55 @@
-"""
-LeadOS - Ultimate Lead Intelligence OS
-"""
-
-import asyncio
-import logging
+"""LeadOS"""
 import os
+import logging
+import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(name)s] %(levelname)s: %(message)s"
-)
+logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("LeadOS")
 
-_boot_error = None
-_orchestrator = None
-
-try:
-    from core.config import LeadOSConfig
-    from core.orchestrator import AgentOrchestrator
-    _config = LeadOSConfig.from_env()
-    _orchestrator = AgentOrchestrator(_config)
-    log.info("Orchestrator created OK")
-except Exception as e:
-    _boot_error = e
-    log.error(f"BOOT ERROR: {e}", exc_info=True)
-
+log.info("main.py loading...")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if _orchestrator:
-        log.info("LeadOS starting agents...")
-        await _orchestrator.initialize()
-        log.info("All agents ready.")
-        task = asyncio.create_task(_orchestrator.run_forever())
+    log.info("LeadOS lifespan start")
+    try:
+        from core.config import LeadOSConfig
+        from core.orchestrator import AgentOrchestrator
+        cfg = LeadOSConfig.from_env()
+        orch = AgentOrchestrator(cfg)
+        app.state.orchestrator = orch
+        await orch.initialize()
+        log.info("Agents ready")
+        task = asyncio.create_task(orch.run_forever())
         yield
         task.cancel()
-    else:
-        log.error(f"Skipping agent init — boot failed: {_boot_error}")
+    except Exception as e:
+        log.error(f"Startup error: {e}", exc_info=True)
+        app.state.orchestrator = None
         yield
 
-
 app = FastAPI(title="LeadOS", version="3.0", lifespan=lifespan)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
+log.info(f"app defined: {app}")
 
 @app.get("/health")
 async def health():
-    if _boot_error:
-        return {"status": "boot_error", "error": str(_boot_error)}
-    return {
-        "status": "ok",
-        "version": "3.0",
-        "agents": len(_orchestrator.agents) if _orchestrator else 0,
-    }
+    orch = getattr(app.state, "orchestrator", None)
+    if orch is None:
+        return {"status": "starting_or_error"}
+    return {"status": "ok", "version": "3.0", "agents": len(orch.agents)}
 
-
-if _orchestrator:
-    try:
-        from api.server import build_routes
-        build_routes(app, _orchestrator)
-        log.info("Routes registered.")
-    except Exception as e:
-        log.error(f"ROUTE ERROR: {e}", exc_info=True)
-
+try:
+    from api.server import build_routes
+    orch_placeholder = None
+    build_routes(app, orch_placeholder)
+    log.info("Routes registered")
+except Exception as e:
+    log.error(f"Route registration error: {e}", exc_info=True)
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=int(os.environ.get("PORT", 8000)),
-        reload=False,
-    )
+    uvicorn.run("main:app", host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
