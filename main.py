@@ -5,6 +5,7 @@ AI Agent Infrastructure Entry Point
 
 import asyncio
 import logging
+import os
 from core.orchestrator import AgentOrchestrator
 from core.config import LeadOSConfig
 from api.server import start_api_server
@@ -27,7 +28,7 @@ async def main():
 
     # Start API server + agent loop concurrently
     await asyncio.gather(
-        start_api_server(orchestrator, host="0.0.0.0", port=8000),
+        start_api_server(orchestrator, host="0.0.0.0", port=int(os.environ.get("PORT", 8000))),
         orchestrator.run_forever(),
     )
 
