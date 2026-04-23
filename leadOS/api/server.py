@@ -23,6 +23,173 @@ from datetime import datetime, timedelta
 log = logging.getLogger("LeadOS.API")
 
 
+def build_routes(app, orchestrator):
+    """Register all API routes onto an existing FastAPI app instance."""
+    from fastapi import HTTPException, BackgroundTasks, Depends, Header, Request
+    from fastapi.middleware.cors import CORSMiddleware
+    from pydantic import BaseModel
+
+    app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+    # ── In-memory stores ──────────────────────────────────────────────────
+    _sessions: Dict[str, Dict] = {}
+    _sequences: List[Dict] = [
+        {"id": "seq_001", "name": "Realtor Referral Partnership",
+         "contacts": 0, "active": False, "steps": 4, "open_rate": 0, "reply_rate": 0,
+         "created_at": datetime.utcnow().isoformat()},
+        {"id": "seq_002", "name": "Auto Dealer Finance Manager",
+         "contacts": 0, "active": False, "steps": 3, "open_rate": 0, "reply_rate": 0,
+         "created_at": datetime.utcnow().isoformat()},
+        {"id": "seq_003", "name": "Mortgage Broker Partnership",
+         "contacts": 0, "active": False, "steps": 3, "open_rate": 0, "reply_rate": 0,
+         "created_at": datetime.utcnow().isoformat()},
+    ]
+    _crm_state: Dict[str, Dict] = {
+        "hubspot":     {"connected": False, "contacts_synced": 0, "uptime": 0, "last_sync": None},
+        "salesforce":  {"connected": False, "contacts_synced": 0, "uptime": 0, "last_sync": None},
+        "pipedrive":   {"connected": False, "contacts_synced": 0, "uptime": 0, "last_sync": None},
+        "gohighlevel": {"connected": False},
+        "zoho":        {"connected": False},
+    }
+    _sync_log: List[Dict] = []
+
+    ADMIN_EMAIL    = os.getenv("LEADOS_ADMIN_EMAIL", "admin@leadOS.ai")
+    ADMIN_PASSWORD = os.getenv("LEADOS_ADMIN_PASSWORD", "LeadOS2024!")
+
+    def _hash(pw: str) -> str:
+        return hashlib.sha256(pw.encode()).hexdigest()
+
+    _users = {
+        ADMIN_EMAIL: {
+            "id": "user_001", "email": ADMIN_EMAIL, "name": "LeadOS Admin",
+            "role": "admin", "password_hash": _hash(ADMIN_PASSWORD),
+            "created_at": datetime.utcnow().isoformat(),
+        }
+    }
+
+    def _create_session(user: Dict) -> str:
+        token = secrets.token_urlsafe(32)
+        _sessions[token] = {
+            "user_id": user["id"], "email": user["email"], "role": user["role"],
+            "created_at": time.time(), "expires_at": time.time() + 86400 * 7,
+        }
+        return token
+
+    def _get_session(authorization: Optional[str] = Header(None)) -> Optional[Dict]:
+        if not authorization:
+            return None
+        token = authorization.replace("Bearer ", "").strip()
+        sess = _sessions.get(token)
+        if not sess or time.time() > sess["expires_at"]:
+            _sessions.pop(token, None)
+            return None
+        return sess
+
+    def _require_auth(authorization: Optional[str] = Header(None)) -> Dict:
+        sess = _get_session(authorization)
+        if not sess:
+            raise HTTPException(status_code=401, detail="Not authenticated. Please log in.")
+        return sess
+
+    class CampaignRequest(BaseModel):
+        prompt: str
+        sources: List[str] = ["crawler", "linkedin"]
+        max_leads: int = 50
+
+    class LeadSubmitRequest(BaseModel):
+        first_name: str = ""
+        last_name: str = ""
+        email: Optional[str] = None
+        title: str = ""
+        company_name: str = ""
+
+    class ICPUpdateRequest(BaseModel):
+        name: Optional[str] = None
+        target_industries: Optional[List[str]] = None
+        target_titles: Optional[List[str]] = None
+        target_seniority: Optional[List[str]] = None
+        min_employees: Optional[int] = None
+        max_employees: Optional[int] = None
+        target_geographies: Optional[List[str]] = None
+        positive_signals: Optional[List[str]] = None
+        negative_signals: Optional[List[str]] = None
+
+    class CRMConnectRequest(BaseModel):
+        crm: str
+        api_key: Optional[str] = None
+        client_id: Optional[str] = None
+        client_secret: Optional[str] = None
+        instance_url: Optional[str] = None
+
+    class CRMSyncRequest(BaseModel):
+        crm: str = "all"
+
+    class SequenceCreateRequest(BaseModel):
+        name: str
+        active: bool = False
+
+    class OutreachGenerateRequest(BaseModel):
+        lead_id: str
+        step: int = 1
+
+    class LoginRequest(BaseModel):
+        email: str
+        password: str
+
+    # ── Core routes ───────────────────────────────────────────────────────
+
+    @app.get("/")
+    async def root():
+        return {"name": "LeadOS", "version": "3.0", "status": "running", "docs": "/docs"}
+
+    @app.get("/status")
+    async def get_status():
+        return orchestrator.get_status()
+
+    @app.get("/leads")
+    async def list_leads(limit: int = 50, status: Optional[str] = None):
+        leads = list(orchestrator.leads_db.values())
+        if status:
+            leads = [l for l in leads if l.status.value == status]
+        leads.sort(key=lambda l: l.ai_score or 0, reverse=True)
+        return {"total": len(leads), "leads": [l.to_dict() for l in leads[:limit]]}
+
+    @app.get("/leads/{lead_id}")
+    async def get_lead(lead_id: str):
+        lead = orchestrator.leads_db.get(lead_id)
+        if not lead:
+            raise HTTPException(status_code=404, detail=f"Lead {lead_id} not found")
+        return lead.to_dict()
+
+    @app.post("/leads")
+    async def submit_lead(req: LeadSubmitRequest):
+        from core.models import Lead, LeadSource
+        lead = Lead(first_name=req.first_name, last_name=req.last_name,
+                    email=req.email, title=req.title, company_name=req.company_name,
+                    source=LeadSource.MANUAL)
+        lead_id = await orchestrator.submit_lead_data(lead)
+        return {"lead_id": lead_id, "status": "pipeline_started"}
+
+    @app.delete("/leads/{lead_id}")
+    async def delete_lead(lead_id: str):
+        if lead_id not in orchestrator.leads_db:
+            raise HTTPException(status_code=404, detail=f"Lead {lead_id} not found")
+        del orchestrator.leads_db[lead_id]
+        return {"deleted": lead_id}
+
+    @app.post("/campaigns")
+    async def run_campaign(req: CampaignRequest, background_tasks: BackgroundTasks):
+        background_tasks.add_task(orchestrator.run_campaign, req.dict())
+        return {"status": "campaign_started", "prompt": req.prompt,
+                "sources": req.sources, "campaign_id": f"camp_{int(time.time())}"}
+
+    @app.get("/events")
+    async def get_events(limit: int = 50):
+        return {"events": orchestrator.event_log[-limit:], "total": len(orchestrator.event_log)}
+
+    log.info("Routes registered via build_routes.")
+
+
 async def start_api_server(orchestrator, host="0.0.0.0", port=8000):
     try:
         from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, Header, Request
