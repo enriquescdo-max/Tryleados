@@ -3,12 +3,14 @@ import os
 import asyncio
 import logging
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("LeadOS")
 log.info("=== LEADOS leadOS/main.py LOADING ===")
 
 app = FastAPI(title="LeadOS", version="2.1.0")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 log.info(f"=== APP DEFINED: {app} ===")
 
 
