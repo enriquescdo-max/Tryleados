@@ -1,0 +1,60 @@
+{
+  "manifest_version": 3,
+  "name": "LeadOS — Insurance Lead Capture",
+  "version": "1.0.0",
+  "description": "Capture insurance leads from Zillow, Cars.com, Craigslist, and county recorder sites. Powered by LeadOS.",
+  "permissions": ["activeTab", "scripting", "storage", "notifications"],
+  "host_permissions": [
+    "https://*.zillow.com/*",
+    "https://*.cars.com/*",
+    "https://*.craigslist.org/*",
+    "https://*.realtor.com/*",
+    "https://*.car-part.com/*",
+    "https://*.harriscountytax.com/*",
+    "https://*.traviscountytax.org/*",
+    "https://tryleados-production.up.railway.app/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://*.zillow.com/*"],
+      "js": ["content_scripts/zillow.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://*.craigslist.org/*/apa/*", "https://*.craigslist.org/search/apa*"],
+      "js": ["content_scripts/craigslist_apts.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://*.craigslist.org/*/cto/*", "https://*.craigslist.org/search/cto*"],
+      "js": ["content_scripts/craigslist_cars.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://*.cars.com/*"],
+      "js": ["content_scripts/cars_com.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://*.realtor.com/*"],
+      "js": ["content_scripts/realtor.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16":  "icons/icon16.png",
+    "48":  "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

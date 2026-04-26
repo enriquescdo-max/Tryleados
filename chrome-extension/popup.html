@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      width: 320px;
+      background: #0C0C0C;
+      color: #e5e5e5;
+      font-family: 'DM Sans', -apple-system, sans-serif;
+      font-size: 13px;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid #1e1e1e;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .logo-icon {
+      width: 24px;
+      height: 24px;
+      background: #E05A1A;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: monospace;
+      font-size: 11px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .logo-text {
+      font-weight: 600;
+      font-size: 14px;
+      letter-spacing: .02em;
+    }
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #4ade80;
+      box-shadow: 0 0 5px #4ade8066;
+    }
+    .status-dot.inactive { background: #555; box-shadow: none; }
+
+    /* Detected banner */
+    .detected {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: #E05A1A14;
+      border-bottom: 1px solid #E05A1A22;
+    }
+    .detected.show { display: flex; }
+    .detected-icon { font-size: 14px; color: #E05A1A; }
+    .detected-text { font-size: 11px; color: #E05A1A; }
+
+    /* Lead card */
+    .lead-card {
+      padding: 14px 16px;
+      border-bottom: 1px solid #1e1e1e;
+      display: none;
+    }
+    .lead-card.show { display: block; }
+
+    .field-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 5px 0;
+      border-bottom: 1px solid #0f0f0f;
+    }
+    .field-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      color: #444;
+      min-width: 80px;
+    }
+    .field-value {
+      font-family: 'IBM Plex Mono', 'Courier New', monospace;
+      font-size: 11px;
+      color: #888;
+      text-align: right;
+      flex: 1;
+    }
+    .field-value.highlight { color: #E05A1A; }
+
+    /* Tags */
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      padding: 10px 0 4px;
+    }
+    .tag {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+    .tag-event { background: #3b82f614; color: #60a5fa; border: 1px solid #3b82f622; }
+    .tag-policy { background: #E05A1A14; color: #E05A1A; border: 1px solid #E05A1A22; }
+    .tag-source { background: #10b98114; color: #34d399; border: 1px solid #10b98122; }
+
+    /* Edit fields */
+    .edit-section {
+      padding: 12px 16px;
+      border-bottom: 1px solid #1e1e1e;
+    }
+    .edit-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      color: #444;
+      margin-bottom: 6px;
+    }
+    select, input[type="text"] {
+      width: 100%;
+      background: #111;
+      border: 1px solid #222;
+      border-radius: 6px;
+      padding: 7px 10px;
+      color: #e5e5e5;
+      font-size: 12px;
+      outline: none;
+      margin-bottom: 8px;
+    }
+    select:focus, input[type="text"]:focus {
+      border-color: #E05A1A44;
+    }
+
+    /* Actions */
+    .actions {
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .btn-primary {
+      background: #E05A1A;
+      border: none;
+      border-radius: 7px;
+      padding: 10px 0;
+      color: #fff;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      width: 100%;
+      transition: opacity .15s;
+    }
+    .btn-primary:hover { opacity: .9; }
+    .btn-primary:active { transform: scale(.98); }
+    .btn-primary:disabled { opacity: .4; cursor: default; }
+    .btn-secondary {
+      background: #111;
+      border: 1px solid #222;
+      border-radius: 7px;
+      padding: 8px 0;
+      color: #888;
+      font-size: 12px;
+      cursor: pointer;
+      width: 100%;
+    }
+    .btn-secondary:hover { border-color: #333; color: #aaa; }
+
+    /* Success state */
+    .success {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      padding: 28px 16px;
+      text-align: center;
+    }
+    .success.show { display: flex; }
+    .success-icon { font-size: 32px; }
+    .success-title { font-weight: 600; font-size: 15px; }
+    .success-sub { font-size: 12px; color: #555; line-height: 1.5; }
+    .lead-id {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: #E05A1A;
+      background: #E05A1A14;
+      padding: 4px 10px;
+      border-radius: 4px;
+    }
+
+    /* No detect state */
+    .no-detect {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 28px 16px;
+      text-align: center;
+      color: #444;
+    }
+    .no-detect.show { display: flex; }
+    .no-detect-icon { font-size: 28px; }
+    .no-detect-sites {
+      font-size: 11px;
+      color: #333;
+      line-height: 1.8;
+    }
+
+    /* Saved leads counter */
+    .footer {
+      padding: 8px 16px;
+      border-top: 1px solid #0f0f0f;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .footer-stat {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      color: #333;
+    }
+    .footer-stat span { color: #E05A1A; }
+    .open-dashboard {
+      font-size: 11px;
+      color: #444;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .open-dashboard:hover { color: #888; }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon">L</div>
+      <div class="logo-text">LeadOS</div>
+    </div>
+    <div id="statusDot" class="status-dot inactive"></div>
+  </div>
+
+  <!-- Detected signal -->
+  <div id="detectedBanner" class="detected">
+    <div class="detected-icon">◉</div>
+    <div id="detectedText" class="detected-text">Lead detected on this page</div>
+  </div>
+
+  <!-- Lead data card -->
+  <div id="leadCard" class="lead-card">
+    <div id="leadTags" class="tags"></div>
+
+    <div id="leadFields">
+      <!-- populated by JS -->
+    </div>
+  </div>
+
+  <!-- Editable fields -->
+  <div id="editSection" class="edit-section" style="display:none">
+    <div class="edit-label">Policy Need</div>
+    <select id="policySelect">
+      <option value="auto">Auto</option>
+      <option value="home">Home</option>
+      <option value="renters">Renters</option>
+      <option value="bundle">Bundle (Auto + Home)</option>
+    </select>
+
+    <div class="edit-label">Life Event</div>
+    <select id="eventSelect">
+      <option value="new_move">New Move</option>
+      <option value="car_purchase">Car Purchase</option>
+      <option value="deed_transfer">Deed Transfer</option>
+      <option value="apt_listing">Apartment Listing</option>
+      <option value="renewal">Renewal</option>
+    </select>
+
+    <div class="edit-label">Note (optional)</div>
+    <input type="text" id="noteInput" placeholder="e.g. interested in full coverage..." />
+  </div>
+
+  <!-- Actions -->
+  <div id="actionsSection" class="actions" style="display:none">
+    <button id="captureBtn" class="btn-primary">⊕ Capture Lead to LeadOS</button>
+    <button id="scoreBtn" class="btn-secondary">◉ Score Carrier Fit</button>
+  </div>
+
+  <!-- Success -->
+  <div id="successState" class="success">
+    <div class="success-icon">◎</div>
+    <div class="success-title">Lead captured</div>
+    <div id="successId" class="lead-id">LD-00000</div>
+    <div class="success-sub">Synced to LeadOS &amp; HubSpot.<br>Heartbeat will dial at 7am tomorrow.</div>
+    <button id="anotherBtn" class="btn-secondary" style="margin-top:4px">Capture another</button>
+  </div>
+
+  <!-- No detection -->
+  <div id="noDetect" class="no-detect show">
+    <div class="no-detect-icon">◌</div>
+    <div style="font-size:12px;color:#555">Navigate to a supported site</div>
+    <div class="no-detect-sites">
+      zillow.com · craigslist.org<br>
+      cars.com · realtor.com<br>
+      county recorder sites
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="footer-stat">Today: <span id="todayCount">0</span> leads</div>
+    <a class="open-dashboard" id="dashLink">Open LeadOS ↗</a>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

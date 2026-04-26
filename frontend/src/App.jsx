@@ -1,6 +1,19 @@
 import "./index.css";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Nav from "./components/Nav";
 import Dashboard from "./pages/Dashboard";
+import LeadBrowser from "./pages/LeadBrowser";
+import CarrierScorer from "./pages/CarrierScorer";
 
 export default function App() {
-  return <Dashboard />;
+  return (
+    <Router>
+      <Nav />
+      <Routes>
+        <Route path="/"       element={<Dashboard />} />
+        <Route path="/leads"  element={<LeadBrowser />} />
+        <Route path="/scorer" element={<CarrierScorer />} />
+      </Routes>
+    </Router>
+  );
 }
