@@ -25,13 +25,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Carrier scorer has zero external deps — always safe to load
+# Carrier scorer and campaigns have zero external deps — always safe to load
 try:
     from routers.carrier_scorer import router as carrier_scorer_router
     app.include_router(carrier_scorer_router)
     log.info("Carrier scorer router loaded")
 except Exception as e:
     log.warning(f"Carrier scorer router failed: {e}")
+
+try:
+    from routers.campaigns import router as campaigns_router
+    app.include_router(campaigns_router)
+    log.info("Campaigns router loaded")
+except Exception as e:
+    log.warning(f"Campaigns router failed: {e}")
 
 
 @app.get("/health")
