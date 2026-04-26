@@ -7,7 +7,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("LeadOS")
-log.info("=== LEADOS MAIN.PY LOADING ===")
 
 app = FastAPI(title="LeadOS", version="3.1")
 
@@ -19,20 +18,20 @@ app.add_middleware(
         "https://tryleados.netlify.app",
         "http://localhost:5173",
         "http://localhost:3000",
+        "*",
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ── Static routers (always available, no agent deps) ─────────────────────────
-from routers.carrier_scorer import router as carrier_scorer_router
-from routers.leads import router as leads_router
-
-app.include_router(carrier_scorer_router)
-app.include_router(leads_router)
-
-log.info(f"=== ROUTERS LOADED ===")
+# Carrier scorer has zero external deps — always safe to load
+try:
+    from routers.carrier_scorer import router as carrier_scorer_router
+    app.include_router(carrier_scorer_router)
+    log.info("Carrier scorer router loaded")
+except Exception as e:
+    log.warning(f"Carrier scorer router failed: {e}")
 
 
 @app.get("/health")
@@ -42,7 +41,7 @@ async def health():
 
 @app.on_event("startup")
 async def startup():
-    log.info("=== STARTUP EVENT FIRED ===")
+    log.info("=== STARTUP ===")
     try:
         from core.config import LeadOSConfig
         from core.orchestrator import AgentOrchestrator
@@ -57,6 +56,14 @@ async def startup():
         log.info("=== ALL AGENTS READY ===")
     except Exception as e:
         log.error(f"=== STARTUP FAILED: {e} ===", exc_info=True)
+
+    # Load leads router after orchestrator (needs Supabase env vars)
+    try:
+        from routers.leads import router as leads_router
+        app.include_router(leads_router)
+        log.info("Leads router loaded")
+    except Exception as e:
+        log.warning(f"Leads router failed: {e}")
 
 
 if __name__ == "__main__":
