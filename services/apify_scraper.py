@@ -4,7 +4,7 @@ import os
 from typing import List, Dict
 
 APIFY_BASE = "https://api.apify.com/v2"
-APIFY_TOKEN = os.environ["APIFY_API_TOKEN"]
+APIFY_TOKEN = os.getenv("APIFY_API_TOKEN", "")
 
 FB_MARKETPLACE_CONFIG = {
     "searchQuery": "car",

@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "../config/.env"))
 
-DB_URL = os.environ["LEADOS_DB_URL"]
+DB_URL = os.getenv("LEADOS_DB_URL", "")
 app = FastAPI()
 
 @app.post("/webhook/inbound-email")

@@ -24,7 +24,7 @@ from dotenv import load_dotenv
 
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "../config/.env"))
 
-DB_URL       = os.environ["LEADOS_DB_URL"]
+DB_URL       = os.getenv("LEADOS_DB_URL", "")
 CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-6")
 claude       = anthropic.AsyncAnthropic()
 

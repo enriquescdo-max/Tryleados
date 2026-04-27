@@ -15,9 +15,9 @@ from dotenv import load_dotenv
 
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "../config/.env"))
 
-DB_URL        = os.environ["LEADOS_DB_URL"]
-SG_API_KEY    = os.environ["SENDGRID_API_KEY"]
-FROM_EMAIL    = os.environ["SENDGRID_FROM_EMAIL"]
+DB_URL        = os.getenv("LEADOS_DB_URL", "")
+SG_API_KEY    = os.getenv("SENDGRID_API_KEY", "")
+FROM_EMAIL    = os.getenv("SENDGRID_FROM_EMAIL", "")
 FROM_NAME     = os.environ.get("SENDGRID_FROM_NAME", "Your Name")
 
 sg = sendgrid.SendGridAPIClient(api_key=SG_API_KEY)
