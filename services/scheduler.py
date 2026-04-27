@@ -7,7 +7,7 @@ import pytz
 from datetime import datetime
 
 scheduler = AsyncIOScheduler(timezone=pytz.timezone("America/Chicago"))
-supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
+supabase = create_client(os.getenv("SUPABASE_URL", ""), os.getenv("SUPABASE_SERVICE_KEY", ""))
 
 
 @scheduler.scheduled_job("cron", hour=7, minute=0)

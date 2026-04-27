@@ -17,10 +17,10 @@ from dotenv import load_dotenv
 
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "../config/.env"))
 
-DB_URL        = os.environ["LEADOS_DB_URL"]
+DB_URL        = os.getenv("LEADOS_DB_URL", "")
 CLAUDE_MODEL  = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-6")
-SLACK_TOKEN   = os.environ["SLACK_BOT_TOKEN"]
-SLACK_CHANNEL = os.environ["SLACK_ALERT_CHANNEL"]
+SLACK_TOKEN   = os.getenv("SLACK_BOT_TOKEN", "")
+SLACK_CHANNEL = os.getenv("SLACK_ALERT_CHANNEL", "")
 
 claude = anthropic.AsyncAnthropic()
 slack  = AsyncWebClient(token=SLACK_TOKEN)

@@ -4,7 +4,7 @@ import os
 import asyncio
 from typing import Dict
 
-client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY", ""))
 
 ENRICHMENT_PROMPT = """You are an AI assistant for Enrique Saucedo, a licensed P&C insurance agent in Austin TX at We Insure. He sells auto, renters, and home insurance across 100+ carriers including Progressive, GEICO, Root, National General, Bristol West, Lemonade, Orion180, Swyfft, Sagesure.
 
