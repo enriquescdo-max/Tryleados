@@ -56,13 +56,27 @@ async def get_leads(status: str = None, min_urgency: int = 1):
         query = (
             db.table("leads")
             .select("*")
-            .gte("urgency_score", min_urgency)
-            .order("urgency_score", desc=True)
+            .order("created_at", desc=True)
+            .limit(500)
         )
         if status:
             query = query.eq("status", status)
         result = query.execute()
-        return {"leads": result.data, "count": len(result.data)}
+        leads = result.data or []
+        # Normalize schema — support both old (ai_score) and new (urgency_score) columns
+        for l in leads:
+            if not l.get("urgency_score") and l.get("ai_score"):
+                l["urgency_score"] = l["ai_score"]
+            if not l.get("raw_name") and l.get("name"):
+                l["raw_name"] = l["name"]
+            if not l.get("raw_contact") and l.get("phone"):
+                l["raw_contact"] = l["phone"]
+            if not l.get("insurance_type"):
+                l["insurance_type"] = "auto"
+        # Filter by min_urgency if set
+        if min_urgency > 1:
+            leads = [l for l in leads if (l.get("urgency_score") or 0) >= min_urgency]
+        return {"leads": leads, "count": len(leads)}
     except Exception as e:
         print(f"[LeadOS] get_leads error: {e}")
         return {"leads": [], "count": 0, "error": str(e)}
