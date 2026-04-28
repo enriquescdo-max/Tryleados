@@ -40,9 +40,17 @@ async def health():
     return {"status": "ok", "version": "3.1"}
 
 
-@app.on_event("startup")
-async def startup():
-    log.info("=== STARTUP ===")
+# Load leads router immediately — no agent deps needed
+try:
+    from routers.leads import router as leads_router
+    app.include_router(leads_router)
+    log.info("Leads router loaded")
+except Exception as e:
+    log.warning(f"Leads router failed: {e}")
+
+
+async def _boot_agents():
+    """Boot agents in background — never blocks startup or health check."""
     try:
         from core.config import LeadOSConfig
         from core.orchestrator import AgentOrchestrator
@@ -56,15 +64,13 @@ async def startup():
         app.state.orchestrator = orch
         log.info("=== ALL AGENTS READY ===")
     except Exception as e:
-        log.error(f"=== STARTUP FAILED: {e} ===", exc_info=True)
+        log.error(f"=== AGENT BOOT FAILED: {e} ===", exc_info=True)
 
-    # Load leads router after orchestrator (needs Supabase env vars)
-    try:
-        from routers.leads import router as leads_router
-        app.include_router(leads_router)
-        log.info("Leads router loaded")
-    except Exception as e:
-        log.warning(f"Leads router failed: {e}")
+
+@app.on_event("startup")
+async def startup():
+    log.info("=== STARTUP — booting agents in background ===")
+    asyncio.create_task(_boot_agents())
 
 
 if __name__ == "__main__":
