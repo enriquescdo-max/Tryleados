@@ -254,19 +254,20 @@ export default function Dashboard() {
 
   async function handleScrape() {
     setScraping(true);
+    toast.success("Scrape started! Leads will appear in ~2 minutes.", { duration: 5000 });
     try {
-      const res = await fetch(`${API}/api/leads/run-scrape`, { method: "POST" });
-      const data = await res.json();
-      toast.success(data.message || "Scrape started!", { duration: 4000 });
-      setTimeout(() => {
-        fetchLeads();
-        fetchStats();
-        setScraping(false);
-      }, 120000);
+      await fetch(`${API}/api/leads/run-scrape`, { method: "POST" });
     } catch (e) {
-      toast.error("Failed to start scrape");
-      setScraping(false);
+      console.log("Scrape request error:", e);
     }
+    // Refresh leads after 2 minutes regardless
+    setTimeout(() => {
+      fetchLeads();
+      fetchStats();
+      setScraping(false);
+    }, 120000);
+    // Also try sooner
+    setTimeout(() => fetchLeads(), 30000);
   }
 
   async function handleStatusChange(leadId, newStatus) {
