@@ -9,7 +9,7 @@ from typing import Dict, List, Optional
 from datetime import datetime
 
 from core.config import LeadOSConfig
-from core.models import AgentTask, AgentType, AgentTaskStatus, Lead, ICPProfile
+from core.models import AgentTask, AgentType, AgentTaskStatus, Lead, ICPProfile, LeadStatus
 
 log = logging.getLogger("LeadOS.Orchestrator")
 
