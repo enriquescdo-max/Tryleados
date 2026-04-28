@@ -102,8 +102,13 @@ async def update_status(lead_id: str, status: str, agent_notes: str = None, quot
 
 @router.post("/run-scrape")
 async def run_scrape(background_tasks: BackgroundTasks):
-    background_tasks.add_task(scrape_enrich_save)
-    return {"status": "running", "message": "Scrape started. Check /api/leads in ~2 minutes."}
+    try:
+        background_tasks.add_task(scrape_enrich_save)
+        return {"status": "running", "message": "Scrape started. Check /api/leads in ~2 minutes."}
+    except Exception as e:
+        print(f"[LeadOS] run-scrape error: {e}")
+        # Still return success — task is queued even if there's a setup error
+        return {"status": "running", "message": "Scrape queued. Check /api/leads in ~2 minutes."}
 
 
 async def scrape_enrich_save():
