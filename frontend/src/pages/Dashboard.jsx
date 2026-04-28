@@ -221,10 +221,13 @@ export default function Dashboard() {
       const url = new URL(`${API}/api/leads`);
       if (statusFilter !== "all") url.searchParams.set("status", statusFilter);
       const res = await fetch(url);
-      if (!res.ok) throw new Error(`API error ${res.status}`);
       const data = await res.json();
-      setLeads(data.leads || []);
-      setError(null);
+      if (data.leads !== undefined) {
+        setLeads(data.leads);
+        setError(null);
+      } else if (!res.ok) {
+        throw new Error(`API error ${res.status}`);
+      }
     } catch (e) {
       // Backend unreachable — show demo leads so UI is never empty
       setLeads(DEMO_LEADS);
