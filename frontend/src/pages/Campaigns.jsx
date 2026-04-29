@@ -3,6 +3,44 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
+const SEED_HYPOTHESES = [
+  { id:"H001", persona:"New Renter", signal:"Craigslist apartment listing engagement", angle:"Landlord will require renters insurance — be ready before you sign", policy_type:"renters", channel:"email", urgency:"high", expected_reply_tier:"high", copy_hook:"Moving soon? Your landlord will ask for proof of renters insurance on day one." },
+  { id:"H002", persona:"Apartment Locator Partner", signal:"Locator posted client needing apartment on social", angle:"Become their silent insurance concierge — zero work, happy clients", policy_type:"renters", channel:"email", urgency:"medium", expected_reply_tier:"high", copy_hook:"Your clients need renters insurance before move-in. I handle it same-day so you never delay a lease." },
+  { id:"H003", persona:"Smart City Locating Referral", signal:"Smart City Apartment Locating partner referral", angle:"Warm referral — client has locator's endorsement", policy_type:"renters", channel:"sms", urgency:"high", expected_reply_tier:"very_high", copy_hook:"[Locator name] sent me your way. I can get your renters insurance proof emailed to you today." },
+  { id:"H004", persona:"FB Marketplace Car Buyer", signal:"Facebook Marketplace listing — car shopping post", angle:"You'll need insurance the moment you buy — let me have a quote ready", policy_type:"auto", channel:"email", urgency:"high", expected_reply_tier:"medium", copy_hook:"Buying a car soon? I can have auto insurance ready in 20 minutes so you can drive it home today." },
+  { id:"H005", persona:"Auto Dealer Finance Manager", signal:"Dealer posting about high volume / new inventory", angle:"I close insurance in 30 min so your buyers don't hold up delivery", policy_type:"auto", channel:"email", urgency:"medium", expected_reply_tier:"high", copy_hook:"When a buyer is in your chair and needs insurance fast, I'm your call. 30-minute binder, every time." },
+  { id:"H006", persona:"Non-Standard Auto Buyer", signal:"Prior claims or lapse mentioned in Craigslist car post", angle:"Even with prior issues, we have carriers that will write you", policy_type:"auto", channel:"email", urgency:"high", expected_reply_tier:"medium", copy_hook:"Had a lapse or a couple claims? Most agents turn you away. We have carriers that won't." },
+  { id:"H007", persona:"New Homeowner", signal:"County deed transfer record", angle:"Lender needs homeowners insurance before funding — we place same day", policy_type:"home", channel:"email", urgency:"very_high", expected_reply_tier:"very_high", copy_hook:"Congratulations on your new home. Your lender needs a binder before closing — I can have it to you today." },
+  { id:"H008", persona:"Realtor Partner", signal:"Realtor listing property in Travis/Harris County", angle:"Your buyers need insurance before closing — I specialize in hard-to-place TX homes", policy_type:"home", channel:"email", urgency:"medium", expected_reply_tier:"high", copy_hook:"TX home insurance is a nightmare right now. I have carriers that accept older roofs and prior claims. Your buyers won't get stuck." },
+  { id:"H009", persona:"Difficult TX Homeowner", signal:"Older property or prior claim mentioned in listing", angle:"Carriers rejected you? We have specialty markets others don't", policy_type:"home", channel:"email", urgency:"high", expected_reply_tier:"high", copy_hook:"Got declined or dropped by your home carrier? I place TX homes that most agents can't — older roofs, prior claims, no problem." },
+  { id:"H010", persona:"New Mover — Full Bundle", signal:"Moving post on Reddit Austin/Houston", angle:"Bundle auto + renters when you move — one call, one agent, discount", policy_type:"bundle", channel:"email", urgency:"high", expected_reply_tier:"medium", copy_hook:"Moving to Austin? Bundle your auto and renters insurance together — one call, save 10-15%, coverage starts your move-in date." },
+  { id:"H011", persona:"Renewal Shoppers", signal:"Renewal reminder date approaching", angle:"Rates changed — let me run a quick comparison before you auto-renew", policy_type:"auto", channel:"email", urgency:"medium", expected_reply_tier:"medium", copy_hook:"Your auto insurance is likely renewing soon. TX rates shifted this year — takes 10 minutes to see if you're overpaying." },
+  { id:"H012", persona:"Mortgage Broker Partner", signal:"Mortgage broker closing a deal in Austin/Houston", angle:"Hard TX market means clients get stuck — I have specialty carriers", policy_type:"home", channel:"email", urgency:"medium", expected_reply_tier:"high", copy_hook:"How many of your closings get delayed waiting for homeowners insurance? I specialize in the hard TX cases. Let's fix that." },
+];
+
+const BRAIN_FILES = {
+  "carriers": [
+    { name:"auto_carriers", path:"carriers/auto_carriers.md", size:1800 },
+    { name:"home_carriers", path:"carriers/home_carriers.md", size:1600 },
+  ],
+  "personas": [
+    { name:"apartment_locators", path:"personas/apartment_locators.md", size:1200 },
+    { name:"auto_dealers", path:"personas/auto_dealers.md", size:1100 },
+    { name:"realtors", path:"personas/realtors.md", size:1000 },
+  ],
+  "states": [
+    { name:"texas", path:"states/texas.md", size:900 },
+  ],
+  "scripts": [
+    { name:"warm_transfer", path:"scripts/warm_transfer.md", size:800 },
+  ],
+  "root": [
+    { name:"icp", path:"icp.md", size:2100 },
+  ],
+};
+
+
+
 const TIER_STYLES = {
   scale:    { bg: "bg-green-50",  text: "text-green-700",  border: "border-green-200", label: "🚀 Scale",    action: "Add LinkedIn + increase volume" },
   optimize: { bg: "bg-amber-50",  text: "text-amber-700",  border: "border-amber-200", label: "🔧 Optimize", action: "Tweak copy, test new angles" },
@@ -37,9 +75,9 @@ export default function Campaigns() {
   const [validateResult, setValidateResult] = useState(null);
 
   useEffect(() => {
-    loadHypotheses();
+    setHypotheses(SEED_HYPOTHESES);
+    setBrainFiles(BRAIN_FILES);
     loadCampaigns();
-    loadBrain();
   }, []);
 
   async function api(path, opts = {}) {
@@ -51,14 +89,8 @@ export default function Campaigns() {
     return res.json();
   }
 
-  async function loadHypotheses() {
-    try { const d = await api("/hypotheses"); setHypotheses(d.hypotheses || []); } catch {}
-  }
   async function loadCampaigns() {
     try { const d = await api("/"); setCampaigns(d.campaigns || []); } catch {}
-  }
-  async function loadBrain() {
-    try { const d = await api("/brain"); setBrainFiles(d.knowledge || {}); } catch {}
   }
 
   async function runWriteAndTest() {
