@@ -236,7 +236,7 @@ class AgentOrchestrator:
             try:
                 from core.models import LeadSource
                 lead.source = LeadSource(row.get("source", "web_crawler"))
-            except ValueError:
+            except (ValueError, Exception):
                 pass
             self.leads_db[lead.id] = lead
         log.info(f"Restored {len(rows)} leads from Supabase into memory.")
