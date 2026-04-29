@@ -307,7 +307,7 @@ export default function Dashboard() {
       <div className="px-6 py-4">
         {error && (
           <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-[10px] text-sm text-red-600">
-            ⚡ Demo mode — Railway backend unreachable. Check: https://tryleados-production.up.railway.app/health
+            ⚡ Showing cached leads — refresh to load latest from database
           </div>
         )}
 
