@@ -233,7 +233,7 @@ class AgentOrchestrator:
             # Restore status
             try:
                 lead.status = LeadStatus(row.get("status", "new"))
-            except ValueError:
+            except (ValueError, NameError, Exception):
                 pass
             # Restore source
             try:

@@ -50,7 +50,8 @@ except Exception as e:
 
 
 async def _boot_agents():
-    """Boot agents in background — never blocks startup or health check."""
+    """Boot agents in background — NEVER blocks startup or health check."""
+    await asyncio.sleep(2)  # Let uvicorn fully start first
     try:
         from core.config import LeadOSConfig
         from core.orchestrator import AgentOrchestrator
@@ -58,13 +59,18 @@ async def _boot_agents():
 
         cfg = LeadOSConfig.from_env()
         orch = AgentOrchestrator(cfg)
-        await orch.initialize()
+        try:
+            await asyncio.wait_for(orch.initialize(), timeout=30)
+        except asyncio.TimeoutError:
+            log.warning("Agent init timed out — app still running")
+            return
         build_routes(app, orch)
         asyncio.create_task(orch.run_forever())
         app.state.orchestrator = orch
         log.info("=== ALL AGENTS READY ===")
     except Exception as e:
-        log.error(f"=== AGENT BOOT FAILED: {e} ===", exc_info=True)
+        log.error(f"=== AGENT BOOT FAILED (non-fatal): {e} ===")
+        # App continues running — leads API still works
 
 
 @app.on_event("startup")
