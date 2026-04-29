@@ -299,6 +299,17 @@ Keep each entry to 2-3 sentences. Agent is a licensed TX P&C agent with 20 min p
         return {"error": str(e)}
 
 
+@router.post("/hubspot/sync-all")
+async def hubspot_sync_all():
+    """Sync ALL Supabase leads to HubSpot. Use to backfill existing leads."""
+    try:
+        from services.hubspot import sync_all_leads_to_hubspot
+        result = await sync_all_leads_to_hubspot()
+        return result
+    except Exception as e:
+        return {"error": str(e)}
+
+
 @router.get("/status")
 async def outreach_status():
     """Check which outreach services are configured."""
