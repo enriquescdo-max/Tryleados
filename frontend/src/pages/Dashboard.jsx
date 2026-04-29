@@ -243,7 +243,7 @@ export default function Dashboard() {
       if (!res.ok) return;
       setStats(await res.json());
     } catch {
-      setStats({ total: DEMO_LEADS.length, hot_leads: 4, new: 6, quoted: 3, closed: 2 });
+      setStats({ total: 0, hot_leads: 0, new: 0, quoted: 0, closed: 0 });
     }
   }, []);
 
@@ -307,7 +307,7 @@ export default function Dashboard() {
       <div className="px-6 py-4">
         {error && (
           <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-[10px] text-sm text-red-600">
-            ⚡ Showing cached leads — refresh to load latest from database
+            ⚠️ Backend connecting — click Run New Scrape to pull fresh leads
           </div>
         )}
 
@@ -320,7 +320,7 @@ export default function Dashboard() {
             <p className="text-4xl mb-3">🔍</p>
             <p className="text-[#1A1A1A] font-medium">No leads yet</p>
             <p className="text-sm text-[#6B6B6B] mt-1">
-              Hit "Run New Scrape" to pull live leads from Facebook, Craigslist, and Reddit.
+              Click "Run New Scrape" above to pull live leads from Facebook Marketplace, Craigslist, and Deed Records.
             </p>
           </div>
         ) : (
