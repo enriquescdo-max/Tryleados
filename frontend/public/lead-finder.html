@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LeadOS — Quick Lead Finder</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0C0C0C; color: #e5e5e5; font-family: 'DM Sans', -apple-system, sans-serif; padding: 24px; min-height: 100vh; }
+  h1 { font-size: 22px; font-weight: 600; color: #E05A1A; margin-bottom: 4px; }
+  .sub { font-size: 13px; color: #555; margin-bottom: 24px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .source-card { background: #111; border: 1px solid #222; border-radius: 10px; padding: 16px; }
+  .source-card h3 { font-size: 13px; font-weight: 600; color: #e5e5e5; margin-bottom: 4px; }
+  .source-card p { font-size: 12px; color: #555; margin-bottom: 12px; line-height: 1.5; }
+  .source-card a { display: block; background: #E05A1A; color: #fff; text-align: center; padding: 8px 0; border-radius: 7px; font-size: 12px; font-weight: 600; text-decoration: none; margin-bottom: 6px; }
+  .source-card a.secondary { background: #1a1a1a; border: 1px solid #333; color: #888; }
+  .source-card a:hover { opacity: 0.9; }
+  .tip { background: #E05A1A14; border: 1px solid #E05A1A33; border-radius: 8px; padding: 12px 16px; font-size: 12px; color: #E05A1A; margin-bottom: 12px; line-height: 1.6; }
+  .script-box { background: #111; border: 1px solid #222; border-radius: 10px; padding: 16px; margin-bottom: 12px; }
+  .script-box h3 { font-size: 12px; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
+  .script-box p { font-size: 13px; color: #aaa; line-height: 1.7; }
+  .copy-btn { background: #1a1a1a; border: 1px solid #333; color: #888; padding: 5px 12px; border-radius: 5px; font-size: 11px; cursor: pointer; margin-top: 8px; }
+  .copy-btn:hover { background: #222; color: #aaa; }
+  h2 { font-size: 14px; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: .08em; margin: 20px 0 10px; }
+</style>
+</head>
+<body>
+
+<h1>⚡ LeadOS — Quick Lead Finder</h1>
+<p class="sub">While the backend syncs — use these direct links to find real leads right now</p>
+
+<div class="tip">🚨 Emergency mode: 9 policies to close. These links open directly to people who need insurance TODAY in Austin/Houston.</div>
+
+<h2>🏠 Renters Insurance Leads</h2>
+<div class="grid">
+  <div class="source-card">
+    <h3>Craigslist Austin Apartments</h3>
+    <p>People posting apartments for rent = tenants who need renters insurance. DM the poster: "Do your tenants require renters insurance?"</p>
+    <a href="https://austin.craigslist.org/search/apa" target="_blank">Open Austin Apartments →</a>
+    <a href="https://houston.craigslist.org/search/apa" target="_blank" class="secondary">Houston Apartments →</a>
+  </div>
+  <div class="source-card">
+    <h3>Reddit — Moving to Austin</h3>
+    <p>People announcing they're moving = immediate renters insurance need. Sort by New for freshest leads.</p>
+    <a href="https://www.reddit.com/r/Austin/search/?q=moving+to+austin&sort=new&t=week" target="_blank">Reddit Austin Movers →</a>
+    <a href="https://www.reddit.com/r/houston/search/?q=moving+to+houston&sort=new&t=week" target="_blank" class="secondary">Reddit Houston Movers →</a>
+  </div>
+  <div class="source-card">
+    <h3>Facebook Groups — Austin Apartments</h3>
+    <p>Search "Austin apartment" in Facebook Groups. Renters looking for apartments need insurance before move-in.</p>
+    <a href="https://www.facebook.com/groups/search/results/?q=austin%20apartments%20for%20rent" target="_blank">FB Austin Apartments →</a>
+    <a href="https://www.facebook.com/marketplace/austin/propertyrentals" target="_blank" class="secondary">FB Marketplace Rentals →</a>
+  </div>
+</div>
+
+<h2>🚗 Auto Insurance Leads</h2>
+<div class="grid">
+  <div class="source-card">
+    <h3>Facebook Marketplace — Cars</h3>
+    <p>People buying cars need insurance before they drive off. Message sellers: "Is your buyer insured yet?"</p>
+    <a href="https://www.facebook.com/marketplace/austin/vehicles" target="_blank">FB Marketplace Austin Cars →</a>
+    <a href="https://www.facebook.com/marketplace/houston/vehicles" target="_blank" class="secondary">FB Marketplace Houston →</a>
+  </div>
+  <div class="source-card">
+    <h3>Craigslist Cars — Austin</h3>
+    <p>Private party sellers and buyers. Message anyone posting "just bought" or asking about insurance.</p>
+    <a href="https://austin.craigslist.org/search/cto" target="_blank">Austin Cars by Owner →</a>
+    <a href="https://houston.craigslist.org/search/cto" target="_blank" class="secondary">Houston Cars by Owner →</a>
+  </div>
+  <div class="source-card">
+    <h3>Reddit — Car Purchase Austin</h3>
+    <p>"Just bought a car" posts = same-day insurance urgency. Reply publicly or DM.</p>
+    <a href="https://www.reddit.com/r/Austin/search/?q=bought+car+insurance&sort=new&t=month" target="_blank">Reddit Austin Car Buyers →</a>
+    <a href="https://www.reddit.com/r/houston/search/?q=bought+car+insurance&sort=new&t=month" target="_blank" class="secondary">Reddit Houston →</a>
+  </div>
+</div>
+
+<h2>🏡 Home Insurance Leads</h2>
+<div class="grid">
+  <div class="source-card">
+    <h3>Reddit — New Homeowners Austin</h3>
+    <p>"Just closed on my house" = immediate homeowners insurance need. These people need a binder TODAY.</p>
+    <a href="https://www.reddit.com/r/Austin/search/?q=just+closed+house&sort=new&t=month" target="_blank">Reddit Austin Homeowners →</a>
+    <a href="https://www.reddit.com/r/FirstTimeHomeBuyer/search/?q=texas+insurance&sort=new" target="_blank" class="secondary">r/FirstTimeHomeBuyer TX →</a>
+  </div>
+  <div class="source-card">
+    <h3>Nextdoor — Insurance Questions</h3>
+    <p>Neighbors asking about insurance = hot leads. Post in Austin/Houston neighborhoods.</p>
+    <a href="https://nextdoor.com" target="_blank">Open Nextdoor →</a>
+    <a href="https://www.reddit.com/r/Austin/search/?q=homeowners+insurance&sort=new&t=month" target="_blank" class="secondary">Reddit Home Insurance →</a>
+  </div>
+  <div class="source-card">
+    <h3>Zillow — New Listings Austin</h3>
+    <p>Homes going under contract = buyers who need homeowners insurance in the next 30 days.</p>
+    <a href="https://www.zillow.com/austin-tx/homes/under_contract/" target="_blank">Austin Under Contract →</a>
+    <a href="https://www.zillow.com/houston-tx/homes/under_contract/" target="_blank" class="secondary">Houston Under Contract →</a>
+  </div>
+</div>
+
+<h2>📞 Outreach Scripts (Copy & Use Now)</h2>
+
+<div class="script-box">
+  <h3>For Craigslist Apartment Movers</h3>
+  <p>"Hey [name] — saw your listing. Quick question: do you require renters insurance from tenants? I'm a licensed TX agent — I can get your tenants insured same day, proof emailed to you directly. Makes move-in seamless. Happy to help."</p>
+  <button class="copy-btn" onclick="navigator.clipboard.writeText(this.previousElementSibling.textContent.trim()); this.textContent='Copied!'; setTimeout(()=>this.textContent='Copy',2000)">Copy</button>
+</div>
+
+<div class="script-box">
+  <h3>For Reddit "Moving to Austin" Posts</h3>
+  <p>"Congrats on the move! One thing people forget — if you're renting, your landlord will require renters insurance before you get keys. I'm a licensed TX agent and can get you covered same day. Lemonade starts at $5/mo. DM me if you want a quick quote."</p>
+  <button class="copy-btn" onclick="navigator.clipboard.writeText(this.previousElementSibling.textContent.trim()); this.textContent='Copied!'; setTimeout(()=>this.textContent='Copy',2000)">Copy</button>
+</div>
+
+<div class="script-box">
+  <h3>For FB Marketplace Car Buyers</h3>
+  <p>"Hey! Buying a car soon? You'll need insurance before you drive it off the lot. I'm a licensed TX agent — I can have you insured in 20 minutes. Even if you have prior claims or a lapse, I have carriers that will write you. Want a quick quote?"</p>
+  <button class="copy-btn" onclick="navigator.clipboard.writeText(this.previousElementSibling.textContent.trim()); this.textContent='Copied!'; setTimeout(()=>this.textContent='Copy',2000)">Copy</button>
+</div>
+
+<div class="script-box">
+  <h3>For New Homeowners (Reddit/Nextdoor)</h3>
+  <p>"Congrats on closing! Your lender needs a homeowners insurance binder before funding — if you haven't sorted that yet, I'm a licensed TX agent specializing in the Austin/Houston market. I can get you a binder today, even for older homes or tricky situations. DM me."</p>
+  <button class="copy-btn" onclick="navigator.clipboard.writeText(this.previousElementSibling.textContent.trim()); this.textContent='Copied!'; setTimeout(()=>this.textContent='Copy',2000)">Copy</button>
+</div>
+
+<div class="script-box">
+  <h3>Text to Fabian at Smart City Apartment Locating</h3>
+  <p>"Hey Fabian — Enrique here from We Insure. Quick ask: would you be open to referring your clients to me for renters insurance? When they get approved for an apartment, I can get their proof of insurance emailed same day — keeps your deals moving and makes you look like a hero. Zero work on your end. Worth a quick call?"</p>
+  <button class="copy-btn" onclick="navigator.clipboard.writeText(this.previousElementSibling.textContent.trim()); this.textContent='Copied!'; setTimeout(()=>this.textContent='Copy',2000)">Copy</button>
+</div>
+
+</body>
+</html>
