@@ -37,3 +37,5 @@ supabase>=2.3.0
 # Billing
 stripe>=8.0.0
 httpx>=0.27.0
+
+pytz>=2024.1

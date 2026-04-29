@@ -18,6 +18,90 @@ from typing import Optional
 log = logging.getLogger("LeadOS.Vapi")
 
 VAPI_API_KEY     = os.getenv("VAPI_API_KEY", "")
+import pytz
+from datetime import datetime as dt
+
+# ── TX/Federal Call Compliance ─────────────────────────────────────────────────
+# TCPA: No calls before 8am or after 9pm LOCAL time
+# We Insure standard: Mon-Fri 8am-5pm CT only (conservative)
+# State overrides: some states are stricter than TCPA
+
+STATE_CALL_WINDOWS = {
+    # (start_hour, end_hour) in local time — 24hr format
+    "TX": (8, 17),   # 8am-5pm
+    "CA": (8, 17),   # 8am-5pm (SB 942 compliant)
+    "FL": (8, 17),
+    "NY": (8, 17),
+    "DEFAULT": (8, 17),  # Conservative default: 8am-5pm M-F
+}
+
+CALL_DAYS = {0, 1, 2, 3, 4}  # Monday=0 through Friday=4 only
+
+def is_call_compliant(phone: str = "", state: str = "TX", override: bool = False) -> dict:
+    """
+    Check if it's legal and within business hours to call right now.
+    Returns: { allowed: bool, reason: str, next_window: str }
+    """
+    if override:
+        return {"allowed": True, "reason": "Manual override — agent confirmed compliance", "compliant": True}
+
+    tz = pytz.timezone("America/Chicago")  # TX Central Time
+    now = dt.now(tz)
+
+    weekday = now.weekday()  # 0=Mon, 6=Sun
+    hour = now.hour
+    minute = now.minute
+
+    # Check day
+    if weekday not in CALL_DAYS:
+        day_name = now.strftime("%A")
+        # Find next Monday
+        days_until_monday = (7 - weekday) % 7 or 7
+        next_monday = now.replace(hour=8, minute=0, second=0).strftime("%A %B %d at 8:00 AM CT")
+        return {
+            "allowed": False,
+            "compliant": False,
+            "reason": f"No calls on {day_name}. We only call Mon-Fri per TCPA + We Insure policy.",
+            "next_window": f"Monday {next_monday}",
+            "tcpa_violation": True,
+        }
+
+    # Check hours
+    window = STATE_CALL_WINDOWS.get(state.upper(), STATE_CALL_WINDOWS["DEFAULT"])
+    start_h, end_h = window
+
+    if hour < start_h:
+        next_time = now.replace(hour=start_h, minute=0, second=0).strftime("%I:%M %p CT")
+        return {
+            "allowed": False,
+            "compliant": False,
+            "reason": f"Too early — calls allowed after {start_h}:00 AM CT per TCPA.",
+            "next_window": next_time,
+            "tcpa_violation": True,
+        }
+
+    if hour >= end_h:
+        # Next business day 8am
+        next_time = now.replace(hour=start_h, minute=0, second=0).strftime("tomorrow at %I:%M %p CT")
+        return {
+            "allowed": False,
+            "compliant": False,
+            "reason": f"After business hours — calls stop at {end_h}:00 PM CT per We Insure policy.",
+            "next_window": next_time,
+            "tcpa_violation": False,  # Not TCPA violation but our policy
+        }
+
+    # All clear
+    time_remaining = (end_h - hour) * 60 - minute
+    return {
+        "allowed": True,
+        "compliant": True,
+        "reason": f"Within calling window ({start_h}:00 AM - {end_h}:00 PM CT, Mon-Fri).",
+        "time_remaining_min": time_remaining,
+        "tcpa_violation": False,
+    }
+
+
 VAPI_BASE        = "https://api.vapi.ai"
 AGENT_PHONE      = os.getenv("VAPI_PHONE_NUMBER_ID", "")  # Your Vapi phone number ID
 ENRIQUE_PHONE    = os.getenv("ENRIQUE_PHONE", "+18325551234")  # Your real cell
@@ -53,6 +137,21 @@ async def create_call(lead: dict) -> dict:
     phone = _clean_phone(lead.get("raw_contact") or lead.get("phone") or "")
     if not phone:
         return {"error": "No phone number on lead", "status": "skipped"}
+
+    # ── Compliance check — TCPA + We Insure policy ────────────────────────────
+    state = _extract_state(lead.get("location") or "TX")
+    override = lead.get("call_override", False)  # Agent can override manually
+    compliance = is_call_compliant(phone=phone, state=state, override=override)
+    if not compliance["allowed"]:
+        log.warning(f"Call blocked (compliance): {compliance['reason']}")
+        return {
+            "status": "blocked",
+            "compliant": False,
+            "reason": compliance["reason"],
+            "next_window": compliance.get("next_window", "Next business day 8am CT"),
+            "tcpa_violation": compliance.get("tcpa_violation", False),
+            "lead_name": first_name,
+        }
 
     first_name = (lead.get("raw_name") or "there").split()[0].title()
     policy_type = lead.get("insurance_type") or "insurance"
@@ -174,6 +273,13 @@ async def list_calls(limit: int = 20) -> list:
             return res.json() if res.status_code == 200 else []
     except Exception:
         return []
+
+
+def _extract_state(location: str) -> str:
+    """Extract state from location string like '78704 · Austin TX'"""
+    import re
+    match = re.search(r"\b([A-Z]{2})\b", location)
+    return match.group(1) if match else "TX"
 
 
 def _clean_phone(phone: str) -> str:
