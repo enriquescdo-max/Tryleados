@@ -9,7 +9,8 @@ import glob
 from pathlib import Path
 from typing import Optional
 
-BRAIN_ROOT = Path(__file__).parent.parent / "second_brain"
+import os
+BRAIN_ROOT = Path(os.environ.get("SECOND_BRAIN_PATH", str(Path(__file__).parent.parent / "second_brain")))
 
 
 def load_file(path: Path) -> str:
