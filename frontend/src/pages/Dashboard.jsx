@@ -131,7 +131,10 @@ function FilterBar({ statusFilter, setStatusFilter, typeFilter, setTypeFilter })
   );
 }
 
-function LeadRow({ lead, onStatusChange }) {
+function LeadRow({ lead, onStatusChange, onCall, onVideo, onSequence }) {
+  function startVapiCall(lead) { onCall && onCall(lead); }
+  function generateVideo(lead) { onVideo && onVideo(lead); }
+  function enrollSequence(lead) { onSequence && onSequence(lead); }
   const tier = getUrgencyTier(lead.urgency_score);
   const rowBg = tier === "hot" ? "hover:bg-red-50/40" : tier === "warm" ? "hover:bg-amber-50/40" : "hover:bg-[#F0FAF5]/60";
 
@@ -203,6 +206,19 @@ function LeadRow({ lead, onStatusChange }) {
           <option value="not_interested">Not Interested</option>
         </select>
       </td>
+      <td className="px-2 py-2">
+        <div style={{ display:"flex", gap:4 }}>
+          <button onClick={() => startVapiCall(lead)}
+            title="Vapi AI warm transfer call"
+            style={{ fontSize:13, padding:"3px 7px", borderRadius:6, border:"1px solid #3b82f644", background:"#3b82f614", color:"#3b82f6", cursor:"pointer" }}>📞</button>
+          <button onClick={() => generateVideo(lead)}
+            title="HeyGen personalized video"
+            style={{ fontSize:13, padding:"3px 7px", borderRadius:6, border:"1px solid #8b5cf644", background:"#8b5cf614", color:"#8b5cf6", cursor:"pointer" }}>🎬</button>
+          <button onClick={() => enrollSequence(lead)}
+            title="Enroll in Instantly email sequence"
+            style={{ fontSize:13, padding:"3px 7px", borderRadius:6, border:"1px solid #10b98144", background:"#10b98114", color:"#10b981", cursor:"pointer" }}>✉️</button>
+        </div>
+      </td>
     </motion.tr>
   );
 }
@@ -251,6 +267,67 @@ export default function Dashboard() {
     fetchLeads();
     fetchStats();
   }, [fetchLeads, fetchStats]);
+
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+
+  async function handleVapiCall(lead) {
+    try {
+      const res = await fetch(`${API_URL}/api/v1/outreach/call/start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lead }),
+      });
+      const data = await res.json();
+      if (data.status === "calling") {
+        toast.success(`📞 Aria is calling ${lead.raw_name || "lead"}! Transfer incoming.`, { duration: 6000 });
+      } else if (data.status === "skipped") {
+        toast.error(`No phone number for this lead`);
+      } else {
+        toast.error(data.error || "Call failed");
+      }
+    } catch (e) {
+      toast.error("Vapi not configured — add VAPI_API_KEY to Railway");
+    }
+  }
+
+  async function handleVideo(lead) {
+    try {
+      toast.success("🎬 Generating personalized video...", { duration: 3000 });
+      const res = await fetch(`${API_URL}/api/v1/outreach/video/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lead }),
+      });
+      const data = await res.json();
+      if (data.video_id) {
+        toast.success(`🎬 Video processing! ID: ${data.video_id}`, { duration: 5000 });
+      } else {
+        toast.error(data.error || "Video generation failed");
+      }
+    } catch (e) {
+      toast.error("HeyGen not configured — add HEYGEN_API_KEY to Railway");
+    }
+  }
+
+  async function handleSequence(lead) {
+    try {
+      const res = await fetch(`${API_URL}/api/v1/outreach/sequence/enroll`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lead, hypothesis_id: "H001" }),
+      });
+      const data = await res.json();
+      if (data.status === "enrolled") {
+        toast.success(`✉️ ${lead.raw_name || "Lead"} enrolled in email sequence!`);
+      } else if (data.status === "skipped") {
+        toast.error("No email address for this lead");
+      } else {
+        toast.error(data.error || "Enrollment failed");
+      }
+    } catch (e) {
+      toast.error("Instantly not configured — add INSTANTLY_API_KEY to Railway");
+    }
+  }
 
   async function handleScrape() {
     setScraping(true);
