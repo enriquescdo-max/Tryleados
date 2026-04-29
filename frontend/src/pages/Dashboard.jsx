@@ -279,7 +279,9 @@ export default function Dashboard() {
       });
       const data = await res.json();
       if (data.status === "calling") {
-        toast.success(`📞 Aria is calling ${lead.raw_name || "lead"}! Transfer incoming.`, { duration: 6000 });
+        toast.success(`📞 Aria is calling ${lead.raw_name || "lead"}! Transfer incoming when qualified.`, { duration: 6000 });
+      } else if (data.status === "blocked") {
+        toast.error(`🚫 ${data.message} Next window: ${data.next_window || "Mon-Fri 8am-5pm CT"}`, { duration: 8000 });
       } else if (data.status === "skipped") {
         toast.error(`No phone number for this lead`);
       } else {

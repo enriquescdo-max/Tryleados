@@ -80,14 +80,37 @@ async def list_avatars():
 
 @router.post("/call/start")
 async def start_call(req: CallRequest):
-    """Initiate a Vapi warm transfer call to a lead."""
+    """Initiate a Vapi warm transfer call to a lead. Blocked outside M-F 8am-5pm CT."""
     try:
-        from services.vapi_service import create_call
+        from services.vapi_service import create_call, is_call_compliant
         lead = req.lead or {}
+
+        # Compliance check first
+        state = (lead.get("location") or "TX").split()[-1] if lead else "TX"
+        override = lead.get("call_override", False)
+        compliance = is_call_compliant(state=state, override=override)
+        if not compliance["allowed"]:
+            return {
+                "status": "blocked",
+                "message": compliance["reason"],
+                "next_window": compliance.get("next_window"),
+                "tcpa_protected": True,
+            }
+
         result = await create_call(lead)
         return result
     except Exception as e:
         return {"error": str(e), "status": "failed"}
+
+
+@router.get("/call/compliance-check")
+async def compliance_check(state: str = "TX", override: bool = False):
+    """Check if it is currently legal to make outbound insurance calls."""
+    try:
+        from services.vapi_service import is_call_compliant
+        return is_call_compliant(state=state, override=override)
+    except Exception as e:
+        return {"error": str(e)}
 
 
 @router.get("/call/status/{call_id}")
