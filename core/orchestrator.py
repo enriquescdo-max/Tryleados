@@ -9,7 +9,7 @@ from typing import Dict, List, Optional
 from datetime import datetime
 
 from core.config import LeadOSConfig
-from core.models import AgentTask, AgentType, AgentTaskStatus, Lead, ICPProfile, LeadStatus
+from core.models import AgentTask, AgentType, AgentTaskStatus, Lead, ICPProfile
 
 log = logging.getLogger("LeadOS.Orchestrator")
 
@@ -230,11 +230,8 @@ class AgentOrchestrator:
                 ai_score=row.get("ai_score"),
                 ai_score_reasoning=row.get("ai_score_reasoning"),
             )
-            # Restore status
-            try:
-                lead.status = LeadStatus(row.get("status", "new"))
-            except (ValueError, NameError, Exception):
-                pass
+            # Restore status — set directly as string
+            lead.status = row.get("status", "new")
             # Restore source
             try:
                 from core.models import LeadSource
