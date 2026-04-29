@@ -79,7 +79,4 @@ async def startup():
     asyncio.create_task(_boot_agents())
 
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0",
-                port=int(os.environ.get("PORT", 8000)))
+# Start via: uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}
