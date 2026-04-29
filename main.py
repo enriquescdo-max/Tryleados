@@ -39,6 +39,13 @@ try:
 except Exception as e:
     log.warning(f"leads failed: {e}")
 
+try:
+    from routers.outreach import router as outreach_router
+    app.include_router(outreach_router)
+    log.info("outreach loaded (HeyGen + Vapi + Instantly + Morning Brief)")
+except Exception as e:
+    log.warning(f"outreach failed: {e}")
+
 # ── Also mount the original agent-based routes if available ──────────────────
 try:
     from api.server import build_routes
