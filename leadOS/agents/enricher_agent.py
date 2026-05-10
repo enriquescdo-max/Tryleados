@@ -140,13 +140,12 @@ class LinkedInAgent(BaseAgent):
             # Use Apify Google Search Scraper (works on free plan)
             actor_url = f"https://api.apify.com/v2/acts/apify~google-search-scraper/run-sync-get-dataset-items?token={apify_key}&timeout=60"
             
-            # Build Google search query to find real estate professionals
-            google_query = f'site:linkedin.com/in "{query}" realtor OR "real estate agent" OR broker'
-            
+            google_query = f'site:linkedin.com/in "{query}" insurance OR "real estate" OR fintech'
+
             payload = {
-                "searchTerms": [google_query],
+                "queries": [google_query],
                 "maxPagesPerQuery": 1,
-                "maxItems": 15,
+                "resultsPerPage": 10,
                 "countryCode": "us",
                 "languageCode": "en",
             }
