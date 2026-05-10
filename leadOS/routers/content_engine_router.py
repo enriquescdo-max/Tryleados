@@ -47,7 +47,8 @@ async def remix(req: RemixRequest):
     hook = supabase.table("viral_hooks").select("*").eq("id",req.hook_id).single().execute().data
     if not hook: raise HTTPException(404,"Hook not found")
     brand = get_brand()
-    system = f"You are a viral copywriter for LeadOS targeting {brand.get(\'target_audience\',\'insurance agents\')}. Return ONLY raw JSON: {{\"script_body\":\"...\",\"cta\":\"...\",\"brand_angle\":\"...\",\"tone\":\"...\"}}"
+    system = ("You are a viral copywriter for LeadOS. "
+             "Return ONLY raw JSON: {\"script_body\":\"...\",\"cta\":\"...\",\"brand_angle\":\"...\",\"tone\":\"...\"}\n")
     raw = await call_claude(f'Remix for LeadOS ({req.format_type}): "{hook["hook_text"]}"', system)
     try: parsed = json.loads(raw.strip())
     except: parsed = {"script_body":raw,"cta":"Try LeadOS free at tryleados.com","brand_angle":"general","tone":"confident"}
