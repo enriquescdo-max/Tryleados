@@ -4,12 +4,14 @@ The central brain that spawns, manages, and coordinates all AI agents.
 """
 
 import asyncio
+import json
 import logging
 from typing import Dict, List, Optional
 from datetime import datetime
 
 from core.config import LeadOSConfig
 from core.models import AgentTask, AgentType, AgentTaskStatus, Lead, ICPProfile
+from core import guardian_agent
 
 log = logging.getLogger("LeadOS.Orchestrator")
 
@@ -108,6 +110,26 @@ class AgentOrchestrator:
 
         try:
             result = await agent.execute(task)
+
+            # Guardian compliance review — non-blocking: errors warn but don't crash pipeline
+            try:
+                verdict = await asyncio.to_thread(
+                    guardian_agent.review,
+                    agent_name=task.agent_type.value,
+                    vertical=task.payload.get("vertical", "leadOS"),
+                    user_input=json.dumps(task.payload, default=str),
+                    agent_output=json.dumps(result, default=str),
+                    session_id=task.id,
+                )
+                if not guardian_agent.is_safe(verdict):
+                    log.warning(f"Guardian BLOCKED task {task.id}: {verdict.get('flags')}")
+                    self._log_event(task.agent_type.value, f"Guardian block: {verdict.get('flags')}", "error")
+                    task.status = AgentTaskStatus.FAILED
+                    task.error = f"guardian_block: {verdict.get('flags')}"
+                    return
+            except Exception as guard_err:
+                log.warning(f"Guardian review failed (non-blocking): {guard_err}")
+
             task.status = AgentTaskStatus.COMPLETED
             task.result = result
             task.completed_at = datetime.utcnow()
