@@ -1,0 +1,39 @@
+{
+  "id": "juniper",
+  "name": "Juniper Austin Apartment Agent",
+  "version": "1.0.0",
+  "vertical": "real_estate",
+  "description": "Qualifies and matches Austin TX apartment seekers to available units",
+  "execution_model": "claude-sonnet-4-6",
+  "monitoring_model": "claude-haiku-4-5-20251001",
+  "pricing": {
+    "qualified_lead_usd": 15.00,
+    "currency": "USD",
+    "billing_event": "showing_scheduled"
+  },
+  "markets": {
+    "primary": "Austin, TX",
+    "neighborhoods": [
+      "South Congress", "East Austin", "The Domain", "Mueller",
+      "Hyde Park", "Bouldin Creek", "Rainey Street", "Cedar Park",
+      "Round Rock", "Pflugerville", "Kyle", "Buda"
+    ]
+  },
+  "qualification_criteria": {
+    "must_capture": ["budget_monthly", "move_in_date", "bedroom_count", "neighborhood_preference"],
+    "must_verify": ["income_3x_rent", "no_eviction_history"],
+    "scoring": {
+      "ready_to_move": { "days_out": "<=30",  "score_boost": 20 },
+      "flexible":      { "days_out": "31-90", "score_boost": 5  },
+      "browsing":      { "days_out": ">90",   "score_boost": 0  }
+    }
+  },
+  "unit_types": ["studio", "1BR", "2BR", "3BR", "townhome"],
+  "amenity_filters": ["dog_friendly", "gym", "pool", "parking", "in_unit_laundry", "EV_charging"],
+  "integrations": ["Zillow", "Apartments.com", "internal_inventory_api"],
+  "tools": ["unit_matcher", "schedule_showing", "income_qualifier", "rag_retrieval", "guardian_review"],
+  "supabase_tables": ["agent_costs", "context_nodes", "guardian_log", "eval_results"],
+  "env_vars": ["ANTHROPIC_API_KEY", "SUPABASE_URL", "SUPABASE_KEY", "TEL"],
+  "created_at": "2025-05-10",
+  "author": "LeadOS"
+}
