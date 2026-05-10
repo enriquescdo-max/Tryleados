@@ -143,7 +143,7 @@ class LinkedInAgent(BaseAgent):
             google_query = f'site:linkedin.com/in "{query}" insurance OR "real estate" OR fintech'
 
             payload = {
-                "queries": [google_query],
+                "queries": google_query,
                 "maxPagesPerQuery": 1,
                 "resultsPerPage": 10,
                 "countryCode": "us",
