@@ -15,7 +15,7 @@ log.info(f"=== APP DEFINED: {app} ===")
 
 
 
-from routers.content_engine import content_engine_router
+from routers.content_engine_router import content_engine_router
 app.include_router(content_engine_router)
 
 @app.get("/health")
