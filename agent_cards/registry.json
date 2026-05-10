@@ -1,0 +1,50 @@
+{
+  "registry_version": "1.0.0",
+  "updated_at": "2025-05-10",
+  "agents": [
+    {
+      "id": "leadOS",
+      "card_path": "agent_cards/leadOS.json",
+      "vertical": "insurance",
+      "status": "active",
+      "execution_model": "claude-sonnet-4-6",
+      "monitoring_model": "claude-haiku-4-5-20251001",
+      "qualified_lead_usd": 25.00,
+      "markets": ["TX", "FL", "GA", "AZ", "OH", "NC", "CO"]
+    },
+    {
+      "id": "peakclaw",
+      "card_path": "agent_cards/peakclaw.json",
+      "vertical": "fintech",
+      "status": "active",
+      "execution_model": "claude-sonnet-4-6",
+      "monitoring_model": "claude-haiku-4-5-20251001",
+      "per_review_usd": 0.50,
+      "markets": ["US_national"]
+    },
+    {
+      "id": "juniper",
+      "card_path": "agent_cards/juniper.json",
+      "vertical": "real_estate",
+      "status": "active",
+      "execution_model": "claude-sonnet-4-6",
+      "monitoring_model": "claude-haiku-4-5-20251001",
+      "qualified_lead_usd": 15.00,
+      "markets": ["Austin, TX"]
+    }
+  ],
+  "shared_infrastructure": {
+    "cost_logger": "core/cost_logger.py",
+    "guardian": "core/guardian_agent.py",
+    "rag": "core/rag_pipeline.py",
+    "evals": "evals/leadOS_eval.py"
+  },
+  "supabase_tables": [
+    "agent_costs",
+    "agent_cards",
+    "context_nodes",
+    "eval_results",
+    "guardian_log"
+  ],
+  "env_vars": ["ANTHROPIC_API_KEY", "SUPABASE_URL", "SUPABASE_KEY", "TEL", "OPENAI_API_KEY"]
+}

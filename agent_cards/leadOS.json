@@ -1,0 +1,47 @@
+{
+  "id": "leadOS",
+  "name": "LeadOS Insurance Agent",
+  "version": "1.0.0",
+  "vertical": "insurance",
+  "description": "Qualifies P&C insurance leads for auto and home, routes to matched carriers",
+  "execution_model": "claude-sonnet-4-6",
+  "monitoring_model": "claude-haiku-4-5-20251001",
+  "pricing": {
+    "qualified_lead_usd": 25.00,
+    "currency": "USD",
+    "billing_event": "lead_qualified"
+  },
+  "markets": ["TX", "FL", "GA", "AZ", "OH", "NC", "CO"],
+  "lines_of_business": ["auto", "home", "renters"],
+  "carriers": {
+    "auto": [
+      { "name": "Progressive",       "tier": "standard",      "min_score": 650 },
+      { "name": "GEICO",             "tier": "preferred",     "min_score": 700 },
+      { "name": "Root",              "tier": "standard",      "min_score": 620 },
+      { "name": "National General",  "tier": "non-standard",  "min_score": 0   },
+      { "name": "Bristol West",      "tier": "non-standard",  "min_score": 0   }
+    ],
+    "home": [
+      { "name": "Orion180",  "tier": "standard",  "min_score": 640 },
+      { "name": "Swyfft",    "tier": "standard",  "min_score": 620 },
+      { "name": "Sagesure",  "tier": "standard",  "min_score": 600 },
+      { "name": "Lemonade",  "tier": "preferred", "min_score": 680 }
+    ]
+  },
+  "qualification_criteria": {
+    "auto": {
+      "must_have": ["vehicle_year", "state", "current_coverage_status"],
+      "disqualify_if": ["out_of_market_state", "commercial_vehicle"]
+    },
+    "home": {
+      "must_have": ["property_type", "state", "year_built"],
+      "disqualify_if": ["mobile_home", "business_use", "prior_nonpay_cancel"]
+    }
+  },
+  "tools": ["lead_qualifier", "carrier_matcher", "quote_retriever", "rag_retrieval", "guardian_review"],
+  "supabase_tables": ["agent_costs", "agent_cards", "context_nodes", "guardian_log"],
+  "system_prompt_key": "leadOS_v1",
+  "env_vars": ["ANTHROPIC_API_KEY", "SUPABASE_URL", "SUPABASE_KEY"],
+  "created_at": "2025-05-10",
+  "author": "LeadOS"
+}

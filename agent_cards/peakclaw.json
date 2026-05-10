@@ -1,0 +1,41 @@
+{
+  "id": "peakclaw",
+  "name": "PeakClaw Fintech Compliance Agent",
+  "version": "1.0.0",
+  "vertical": "fintech",
+  "description": "Monitors and advises on regulatory compliance for fintech products — BSA/AML, UDAAP, TILA, RESPA",
+  "execution_model": "claude-sonnet-4-6",
+  "monitoring_model": "claude-haiku-4-5-20251001",
+  "pricing": {
+    "per_review_usd": 0.50,
+    "currency": "USD",
+    "billing_event": "compliance_review_completed"
+  },
+  "regulatory_frameworks": ["BSA", "AML", "UDAAP", "TILA", "RESPA", "FCRA", "ECOA", "CFPB"],
+  "product_types": ["mortgage", "HELOC", "personal_loan", "BNPL", "payment_processing", "money_transmission"],
+  "capabilities": [
+    "adverse_action_notice_review",
+    "marketing_copy_compliance_check",
+    "transaction_monitoring_alert_triage",
+    "policy_gap_analysis",
+    "regulatory_change_impact_summary"
+  ],
+  "tools": ["compliance_checker", "regulatory_rag", "guardian_review", "audit_logger"],
+  "supabase_tables": ["agent_costs", "guardian_log", "context_nodes", "eval_results"],
+  "guardrails": {
+    "never": [
+      "provide_legal_advice",
+      "approve_transactions",
+      "make_credit_decisions",
+      "access_live_customer_pii"
+    ],
+    "always": [
+      "cite_regulatory_source",
+      "recommend_human_legal_review_for_high_risk",
+      "log_every_review_to_guardian"
+    ]
+  },
+  "env_vars": ["ANTHROPIC_API_KEY", "SUPABASE_URL", "SUPABASE_KEY"],
+  "created_at": "2025-05-10",
+  "author": "LeadOS"
+}
