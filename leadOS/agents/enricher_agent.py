@@ -138,7 +138,7 @@ class LinkedInAgent(BaseAgent):
         try:
             import aiohttp
             # Use Apify Google Search Scraper (works on free plan)
-            actor_url = f"https://api.apify.com/v2/acts/apidojo~google-search-scraper/run-sync-get-dataset-items?token={apify_key}&timeout=60"
+            actor_url = f"https://api.apify.com/v2/acts/apify~google-search-scraper/run-sync-get-dataset-items?token={apify_key}&timeout=60"
             
             # Build Google search query to find real estate professionals
             google_query = f'site:linkedin.com/in "{query}" realtor OR "real estate agent" OR broker'
