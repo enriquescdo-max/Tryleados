@@ -71,6 +71,20 @@ try:
 except Exception as e:
     log.warning(f"Agent system unavailable: {e}")
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://tryleados.com", "http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+from routers.leads import router as leads_router
+app.include_router(leads_router)
+from routers.content_engine import content_engine_router
+app.include_router(content_engine_router)
+
+
 
 @app.get("/health")
 async def health():
