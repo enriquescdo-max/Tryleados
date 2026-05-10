@@ -14,6 +14,10 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 log.info(f"=== APP DEFINED: {app} ===")
 
 
+
+from routers.content_engine import content_engine_router
+app.include_router(content_engine_router)
+
 @app.get("/health")
 async def health():
     return {"status": "ok", "version": "2.1.0"}
