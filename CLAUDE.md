@@ -1,3 +1,5 @@
+@CLAUDE_PHILOSOPHY.md
+
 # LEADOS — MASTER CLAUDE.md
 ## Single Source of Truth for Claude Code
 ## Owner: Enrique Saucedo | We Insure / PEAK6
