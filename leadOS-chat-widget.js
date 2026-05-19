@@ -207,7 +207,7 @@
       history.push({role:'assistant', content: reply});
     } catch(e) {
       hideTyping();
-      addMsg('bot', "I'm having trouble connecting right now. Please try again in a moment, or email support@tryleados.com.");
+      addMsg('bot', "I'm having trouble connecting right now. Please try again in a moment, or email support@TryleadOS.com.");
     }
 
     if (send) send.disabled = false;

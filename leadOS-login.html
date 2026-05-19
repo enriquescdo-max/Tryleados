@@ -119,14 +119,14 @@ input::placeholder{color:#2d3f5a}
 
 <div class="footer">
   <a href="leadOS-landing-page.html">← Homepage</a> &nbsp;·&nbsp;
-  <a href="mailto:support@tryleados.com">Support</a>
+  <a href="mailto:support@TryleadOS.com">Support</a>
 </div>
 
 <!-- Load Supabase with multiple fallbacks -->
 <script>
 window.SB_URL = 'https://vvsshirbxfypjvrdmgls.supabase.co';
 window.SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2c3NoaXJieGZ5cGp2cmRtZ2xzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NTIwODQsImV4cCI6MjA4OTMyODA4NH0.XtNj4zIamNNUbo3Hhpu4dayzhT9XvwMZY1PhP9vLybY';
-window.DASH = 'https://tryleados.com/leadOS-dashboard.html';
+window.DASH = 'https://TryleadOS.com/leadOS-dashboard.html';
 
 function loadSupabase(urls, idx) {
   if (idx >= urls.length) {
@@ -244,7 +244,7 @@ function emailLogin() {
 function forgotPw() {
   var email = document.getElementById('em').value.trim();
   if (!email) { msg('inf', 'Enter your email above first.'); return; }
-  if (window.sb) sb.auth.resetPasswordForEmail(email, { redirectTo: 'https://tryleados.com/leadOS-login.html' });
+  if (window.sb) sb.auth.resetPasswordForEmail(email, { redirectTo: 'https://TryleadOS.com/leadOS-login.html' });
   msg('ok', 'Password reset email sent to ' + email);
 }
 

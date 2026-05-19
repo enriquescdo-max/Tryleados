@@ -13,9 +13,29 @@
 You are Claude Code. This is your complete project briefing for LeadOS.
 - This is a PEAK6 Trials submission. The founder is a solo builder.
 - Every decision must favor **speed + correctness** over elegance.
-- When in doubt: ship it working, refactor later.
+- When the task is clear: ship it working. When it's ambiguous: ask before coding.
 - Never hardcode API keys. Always use `process.env.KEY_NAME` or `os.environ["KEY_NAME"]`.
 - After each module is complete, confirm it works before moving to the next.
+
+---
+
+## CODING GUIDELINES (Karpathy Rules)
+
+**K1 — Think Before Coding**
+State assumptions before implementing. If task has multiple interpretations, present them — don't pick silently. If something is unclear, stop and ask.
+
+**K2 — Simplicity First**
+Minimum code that solves the problem. No features beyond what was asked. The Section 5 design stack (GSAP, Framer, etc.) applies only when explicitly building UI/design — not for every file touch.
+
+**K3 — Surgical Changes**
+Touch only what the request requires. Don't refactor adjacent code. Don't delete pre-existing dead code unless asked. Every changed line must trace to the request.
+
+**K4 — Goal-Driven Execution**
+Before multi-step tasks, state a brief plan with verifiable checkpoints:
+```
+1. [Step] → verify: [check]
+2. [Step] → verify: [check]
+```
 
 ---
 
@@ -27,7 +47,7 @@ LeadOS is an AI-native lead generation OS for P&C insurance agents — and any o
 "LeadOS is the first AI OS that finds, qualifies, and delivers leads to insurance agents automatically — while you sleep."
 
 **Live URLs:**
-- Frontend: https://tryleados.com (Netlify)
+- Frontend: https://TryleadOS.com (Netlify)
 - Backend: https://tryleados-production.up.railway.app (Railway)
 - Database: Supabase (vvsshirbxfypjvrdmgls.supabase.co)
 
@@ -610,7 +630,7 @@ async def start_scheduler():
 from fastapi.middleware.cors import CORSMiddleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://tryleados.com", "http://localhost:3000"],
+    allow_origins=["https://TryleadOS.com", "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -647,7 +667,7 @@ After build, confirm ALL of these:
 - [ ] `POST /api/leads/run-scrape` → `{"status": "running"}`
 - [ ] Wait 2 min → `GET /api/leads` returns 10+ lead objects
 - [ ] Each lead has `urgency_score`, `outreach_message`, `carrier_recommendation`
-- [ ] Dashboard loads at tryleados.com
+- [ ] Dashboard loads at TryleadOS.com
 - [ ] Copy button works and shows toast
 - [ ] Status dropdown updates persist on page refresh
 - [ ] Stats bar shows correct counts
@@ -664,7 +684,7 @@ After build, confirm ALL of these:
 | Cloudflare blocking scripts | Disable Cloudflare proxy for Railway subdomain |
 | Apify actor fails | Log error, continue with other sources — never crash pipeline |
 | Claude JSON parse error | Strip markdown fences before `json.loads()` |
-| CORS error from Netlify | Add `https://tryleados.com` to allow_origins in main.py |
+| CORS error from Netlify | Add `https://TryleadOS.com` to allow_origins in main.py |
 | GitHub filename conflicts | Never number files on repeated downloads — overwrite same filename |
 
 ---

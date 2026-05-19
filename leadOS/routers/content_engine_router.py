@@ -51,7 +51,11 @@ async def remix(req: RemixRequest):
              "Return ONLY raw JSON: {\"script_body\":\"...\",\"cta\":\"...\",\"brand_angle\":\"...\",\"tone\":\"...\"}\n")
     raw = await call_claude(f'Remix for LeadOS ({req.format_type}): "{hook["hook_text"]}"', system)
     try: parsed = json.loads(raw.strip().replace("```json","").replace("```","").strip())
-    except: parsed = {"script_body":raw,"cta":"Try LeadOS free at tryleados.com","brand_angle":"general","tone":"confident"}
+<<<<<<< HEAD
+    except: parsed = {"script_body":raw,"cta":"Try LeadOS free at TryleadOS.com","brand_angle":"general","tone":"confident"}
+=======
+    except: parsed = {"script_body":raw,"cta":"Try LeadOS free at TryleadOS.com","brand_angle":"general","tone":"confident"}
+>>>>>>> 5518503 (merge: LeadOS v3.2 → TryleadOS.com canonical)
     payload = {"hook_id":req.hook_id,"brand_angle":parsed.get("brand_angle","general"),"script_body":parsed.get("script_body",""),"cta":parsed.get("cta",""),"format_type":req.format_type,"tone":parsed.get("tone","confident"),"status":"pending"}
     result = supabase.table("content_scripts").insert(payload).execute()
     supabase.table("viral_hooks").update({"status":"remixed"}).eq("id",req.hook_id).execute()

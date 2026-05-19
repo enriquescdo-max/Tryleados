@@ -1,6 +1,10 @@
 // LeadOS Chrome Extension — popup.js
 const API_BASE = "https://tryleados-production.up.railway.app";
-const DASHBOARD = "https://tryleados.com";
+<<<<<<< HEAD
+const DASHBOARD = "https://TryleadOS.com";
+=======
+const DASHBOARD = "https://TryleadOS.com";
+>>>>>>> 5518503 (merge: LeadOS v3.2 → TryleadOS.com canonical)
 
 let currentLead = null;
 

@@ -27,7 +27,7 @@ Length: 60 seconds""",
         "template": """Hook: "The #1 mistake insurance agents make with online leads"
 Tip: Waiting more than 5 minutes to call a new lead drops your conversion rate by 80%.
 LeadOS tie-in: LeadOS calls new leads within 60 seconds automatically.
-CTA: "Try it free at tryleados.com"
+CTA: "Try it free at TryleadOS.com"
 Length: 45 seconds""",
         "duration": 45,
     },
@@ -36,7 +36,7 @@ Length: 45 seconds""",
         "template": """Hook: "An AI just transferred a live qualified lead to my phone"
 Walkthrough: AI calls the lead → qualifies with 5 questions → scores 0-100 → transfers at 75+
 Result: You only pick up the phone when the lead is already sold.
-CTA: "This is now available for any insurance agent at tryleados.com"
+CTA: "This is now available for any insurance agent at TryleadOS.com"
 Length: 90 seconds""",
         "duration": 90,
     },

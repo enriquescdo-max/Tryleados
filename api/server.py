@@ -471,8 +471,8 @@ Return ONLY valid JSON with keys "subject" and "body". No markdown, no explanati
     class CheckoutRequest(BaseModel):
         tier: str = "lone_wolf"   # lone_wolf | team | white_label
         email: str = ""
-        success_url: str = "https://tryleados.com/leadOS-onboarding.html?step=2"
-        cancel_url: str  = "https://tryleados.com"
+        success_url: str = "https://TryleadOS.com/leadOS-onboarding.html?step=2"
+        cancel_url: str  = "https://TryleadOS.com"
 
     class TransferBillRequest(BaseModel):
         email: str
@@ -628,7 +628,7 @@ Keep responses concise (3-5 sentences max) and action-oriented."""
     async def chat_message(req: ChatMessageRequest):
         """Support chatbot powered by Claude API with MetaClaw memory injection."""
         if not orchestrator.config.anthropic_api_key:
-            return {"reply": "Chat is not available right now — ANTHROPIC_API_KEY not configured. Email support@tryleados.com for help."}
+            return {"reply": "Chat is not available right now — ANTHROPIC_API_KEY not configured. Email support@TryleadOS.com for help."}
 
         try:
             import anthropic, asyncio
@@ -687,7 +687,7 @@ Keep responses concise (3-5 sentences max) and action-oriented."""
 
         except Exception as e:
             log.error(f"Chat error: {e}")
-            return {"reply": "I'm having trouble right now. Please try again or email support@tryleados.com."}
+            return {"reply": "I'm having trouble right now. Please try again or email support@TryleadOS.com."}
 
     # ══════════════════════════════════════════════════════════════════════
     # ONBOARDING
@@ -809,12 +809,12 @@ Keep responses concise (3-5 sentences max) and action-oriented."""
     </tr></thead>
     <tbody>{leads_html}</tbody>
   </table>
-  <a href="https://tryleados.com/leadOS-dashboard.html"
+  <a href="https://TryleadOS.com/leadOS-dashboard.html"
      style="display:inline-block;background:#00ff88;color:#000;font-weight:700;padding:12px 24px;border-radius:8px;text-decoration:none;font-family:sans-serif">
     View Full Dashboard →
   </a>
   <p style="color:#2d3f5a;font-size:10px;margin-top:32px">
-    LeadOS · Austin, TX · <a href="https://tryleados.com" style="color:#2d3f5a">tryleados.com</a>
+    LeadOS · Austin, TX · <a href="https://TryleadOS.com" style="color:#2d3f5a">TryleadOS.com</a>
   </p>
 </body></html>"""
 
@@ -1093,13 +1093,13 @@ Do not use bullet points. Write in paragraph form. Address the agent as "{req.us
     </tr></thead>
     <tbody>{leads_html}</tbody>
   </table>
-  <a href="https://tryleados.com/leadOS-dashboard.html"
+  <a href="https://TryleadOS.com/leadOS-dashboard.html"
      style="display:inline-block;background:#00ff88;color:#000;font-weight:700;padding:12px 24px;border-radius:8px;text-decoration:none;font-family:sans-serif;font-size:13px">
     View Full Dashboard →
   </a>
   <p style="color:#2d3f5a;font-size:10px;margin-top:28px">
-    LeadOS · Austin, TX · <a href="https://tryleados.com" style="color:#2d3f5a">tryleados.com</a>
-    · <a href="https://tryleados.com/unsubscribe" style="color:#2d3f5a">Unsubscribe</a>
+    LeadOS · Austin, TX · <a href="https://TryleadOS.com" style="color:#2d3f5a">TryleadOS.com</a>
+    · <a href="https://TryleadOS.com/unsubscribe" style="color:#2d3f5a">Unsubscribe</a>
   </p>
 </body></html>"""
 
