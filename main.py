@@ -73,11 +73,8 @@ except Exception as e:
 
 app.add_middleware(
     CORSMiddleware,
-<<<<<<< HEAD
     allow_origins=["https://TryleadOS.com", "http://localhost:3000"],
-=======
     allow_origins=["https://TryleadOS.com", "http://localhost:3000"],
->>>>>>> 5518503 (merge: LeadOS v3.2 → TryleadOS.com canonical)
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -88,8 +85,6 @@ app.include_router(leads_router)
 from routers.content_engine import content_engine_router
 app.include_router(content_engine_router)
 
-<<<<<<< HEAD
-=======
 
 
 try:
@@ -98,7 +93,6 @@ try:
     log.info("agents_router loaded")
 except Exception as e:
     log.warning(f"agents_router failed: {e}")
->>>>>>> 5518503 (merge: LeadOS v3.2 → TryleadOS.com canonical)
 
 
 @app.get("/health")
