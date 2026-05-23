@@ -46,6 +46,14 @@ try:
 except Exception as e:
     log.warning(f"outreach failed: {e}")
 
+# ── Vapi Webhook (inbound call events -> HubSpot + Supabase) ─────────────────
+try:
+    from routers.vapi_webhook import router as vapi_webhook_router
+    app.include_router(vapi_webhook_router)
+    log.info("vapi_webhook loaded — POST /webhook/vapi active")
+except Exception as e:
+    log.warning(f"vapi_webhook failed: {e}")
+
 # ── Also mount the original agent-based routes if available ──────────────────
 try:
     from api.server import build_routes
@@ -74,7 +82,6 @@ except Exception as e:
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://TryleadOS.com", "http://localhost:3000"],
-    allow_origins=["https://TryleadOS.com", "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -85,8 +92,6 @@ app.include_router(leads_router)
 from routers.content_engine import content_engine_router
 app.include_router(content_engine_router)
 
-
-
 try:
     from agents.agents_router import router as agents_router
     app.include_router(agents_router, prefix="/agents")
@@ -94,11 +99,9 @@ try:
 except Exception as e:
     log.warning(f"agents_router failed: {e}")
 
-
 @app.get("/health")
 async def health():
     return {"status": "ok", "version": "3.2"}
-
 
 @app.get("/")
 async def root():
