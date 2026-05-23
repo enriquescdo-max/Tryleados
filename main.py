@@ -34,75 +34,125 @@ except Exception as e:
 
 try:
     from routers.leads import router as leads_router
-    app.include_router(leads_router)
-    log.info("leads loaded")
-except Exception as e:
-    log.warning(f"leads failed: {e}")
 
-try:
-    from routers.outreach import router as outreach_router
-    app.include_router(outreach_router)
-    log.info("outreach loaded (HeyGen + Vapi + Instantly + Morning Brief)")
-except Exception as e:
-    log.warning(f"outreach failed: {e}")
 
 # ── Vapi Webhook (inbound call events -> HubSpot + Supabase) ─────────────────
-try:
-    from routers.vapi_webhook import router as vapi_webhook_router
-    app.include_router(vapi_webhook_router)
-    log.info("vapi_webhook loaded — POST /webhook/vapi active")
-except Exception as e:
-    log.warning(f"vapi_webhook failed: {e}")
+import re
+from datetime import datetime, timezone
+from fastapi import BackgroundTasks
 
-# ── Also mount the original agent-based routes if available ──────────────────
-try:
-    from api.server import build_routes
-    import asyncio
-    from core.config import LeadOSConfig
-    from core.orchestrator import AgentOrchestrator
+_HUBSPOT_KEY = os.getenv("HUBSPOT_API_KEY", "")
+_SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+_SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "") or os.getenv("SUPABASE_KEY", "")
+_TRANSFER_PHONE = os.getenv("TRANSFER_PHONE", "+16028321135")
 
-    async def _boot():
-        try:
-            cfg = LeadOSConfig.from_env()
-            orch = AgentOrchestrator(cfg)
-            await asyncio.wait_for(orch.initialize(), timeout=20)
-            build_routes(app, orch)
-            asyncio.create_task(orch.run_forever())
-            log.info("Agents ready")
-        except Exception as e:
-            log.warning(f"Agents skipped: {e}")
 
-    @app.on_event("startup")
-    async def startup():
-        asyncio.create_task(_boot())
+def _parse_intake(transcript):
+    if not transcript:
+        return {}
+    t = transcript.lower()
+    phone_raw = ""
+    pm = re.search(r"(\(?\d{3}\)?[\s.\-]\d{3}[\s.\-]\d{4})", transcript)
+    if pm:
+        digits = re.sub("[^\d]", "", pm.group(1))
+        phone_raw = ("+1" + digits) if len(digits) == 10 else ("+" + digits if len(digits) == 11 else "")
+    em = re.search(r"([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})", transcript)
+    email = em.group(1) if em else ""
+    zm = re.search(r"(?:zip|postal)[^\d]*(\d{5})", transcript, re.IGNORECASE)
+    zip_code = zm.group(1) if zm else ""
+    ins_type = "both" if "both" in t else ("home" if "home" in t or "homeowner" in t else "auto")
+    if "transfer" in t or "connecting" in t or "hold for" in t:
+        score = 80
+    elif "call you back" in t or "15 minute" in t:
+        score = 60
+    else:
+        score = 35
+    return {"phone": phone_raw, "email": email, "zip_code": zip_code, "insurance_type": ins_type, "urgency_score": score}
 
-except Exception as e:
-    log.warning(f"Agent system unavailable: {e}")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["https://TryleadOS.com", "http://localhost:3000"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+async def _push_hubspot(lead):
+    if not _HUBSPOT_KEY:
+        return None
+    try:
+        from services.hubspot import push_lead_to_hubspot
+        return await push_lead_to_hubspot(lead)
+    except Exception as exc:
+        log.error("HubSpot push failed: %s", exc)
+        return None
 
-from routers.leads import router as leads_router
-app.include_router(leads_router)
-from routers.content_engine import content_engine_router
-app.include_router(content_engine_router)
 
-try:
-    from agents.agents_router import router as agents_router
-    app.include_router(agents_router, prefix="/agents")
-    log.info("agents_router loaded")
-except Exception as e:
-    log.warning(f"agents_router failed: {e}")
+async def _save_vapi_call(record):
+    if not _SUPABASE_URL or not _SUPABASE_KEY:
+        return
+    try:
+        import httpx
+        headers = {"apikey": _SUPABASE_KEY, "Authorization": "Bearer " + _SUPABASE_KEY, "Content-Type": "application/json", "Prefer": "return=minimal"}
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.post(_SUPABASE_URL + "/rest/v1/vapi_calls", headers=headers, json=record)
+            if resp.status_code not in (200, 201):
+                log.warning("Supabase vapi_calls: %s", resp.status_code)
+    except Exception as exc:
+        log.error("Supabase error: %s", exc)
 
-@app.get("/health")
-async def health():
-    return {"status": "ok", "version": "3.2"}
 
-@app.get("/")
-async def root():
-    return {"app": "LeadOS", "status": "running", "version": "3.2"}
+async def _on_call_end(msg):
+    from fastapi import Request as _R
+    call = msg.get("call", msg)
+    call_id = call.get("id", "")
+    transcript = msg.get("transcript", "") or call.get("transcript", "")
+    recording = msg.get("recordingUrl", "") or call.get("recordingUrl", "")
+    duration = msg.get("durationSeconds", 0) or call.get("durationSeconds", 0)
+    ended_reason = msg.get("endedReason", "") or call.get("endedReason", "")
+    caller_phone = call.get("customer", {}).get("number", "") or call.get("phoneNumber", "")
+    log.info("Vapi call-end: id=%s duration=%ss reason=%s", call_id, duration, ended_reason)
+    intake = _parse_intake(transcript)
+    if not intake.get("phone") and caller_phone:
+        intake["phone"] = caller_phone
+    transferred = "transfer" in (ended_reason or "").lower() or intake.get("urgency_score", 0) >= 75
+    lead = {
+        **intake,
+        "call_id": call_id, "recording_url": recording, "call_duration_seconds": int(duration or 0),
+        "ended_reason": ended_reason, "transferred": transferred, "raw_contact": intake.get("phone") or caller_phone,
+        "location": intake.get("zip_code", ""), "life_event": "insurance_inquiry", "outreach_message": "",
+        "enrichment_reasoning": "Inbound Vapi call " + call_id + ". Duration: " + str(duration) + "s.",
+        "carrier_recommendation": "We Insure", "source": "vapi_inbound",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    contact_id = await _push_hubspot(lead)
+    if contact_id:
+        lead["hubspot_contact_id"] = contact_id
+        log.info("HubSpot contact: %s", contact_id)
+    await _save_vapi_call({
+        "call_id": call_id, "caller_phone": intake.get("phone") or caller_phone,
+        "caller_name": intake.get("raw_name", ""), "caller_email": intake.get("email", ""),
+        "zip_code": intake.get("zip_code", ""), "insurance_type": intake.get("insurance_type", "auto"),
+        "urgency_score": intake.get("urgency_score", 0), "transferred": transferred,
+        "ended_reason": ended_reason, "duration_seconds": int(duration or 0), "recording_url": recording,
+        "transcript": (transcript or "")[:8000], "hubspot_contact_id": lead.get("hubspot_contact_id", ""),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    })
+    log.info("Vapi call-end done: id=%s transferred=%s hubspot=%s", call_id, transferred, lead.get("hubspot_contact_id", "none"))
+
+
+@app.post("/webhook/vapi", tags=["vapi-webhook"])
+async def vapi_webhook(request: Request, background_tasks: BackgroundTasks):
+    """Single endpoint for all Vapi server events (call-end -> HubSpot + Supabase)."""
+    try:
+        payload = await request.json()
+    except Exception:
+        return {"received": False}
+    msg = payload.get("message", payload)
+    msg_type = msg.get("type", "unknown")
+    log.info("Vapi event: %s", msg_type)
+    if msg_type in ("end-of-call-report", "call-end"):
+        background_tasks.add_task(_on_call_end, msg)
+        return {"received": True, "action": "processing"}
+    if msg_type in ("call-start", "status-update"):
+        return {"received": True}
+    if msg_type == "tool-calls":
+        return {"results": []}
+    if msg_type == "transfer-destination-request":
+        return {"destination": {"type": "number", "number": _TRANSFER_PHONE, "message": "Connecting you to Enrique now, please hold."}}
+    return {"received": True, "type": msg_type}
+
+log.info("=== /webhook/vapi registered ===")
