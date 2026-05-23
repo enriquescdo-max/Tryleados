@@ -1,15 +1,7 @@
 """
 LeadOS Vapi Webhook Router
-Handles all inbound Vapi webhook events.
-POSTs to /webhook/vapi are dispatched by message type:
-
-  - end-of-call-report  -> parse transcript -> push to HubSpot -> save to Supabase
-  - call-start          -> log
-  - status-update       -> log
-  - tool-calls          -> reserved for future function-calling tools
-
-Vapi Server URL (set in LeadOS Intake assistant Advanced tab):
-  https://tryleados-production.up.railway.app/webhook/vapi
+Single endpoint for all Vapi server events.
+Vapi Server URL: https://tryleados-production.up.railway.app/webhook/vapi
 """
 
 import os
@@ -27,11 +19,7 @@ SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "") or os.getenv("SUPABASE
 TRANSFER_PHONE = os.getenv("TRANSFER_PHONE", "+16028321135")
 
 
-# ------------------------------------------------------------------ #
-#  TRANSCRIPT PARSER                                                   #
-# ------------------------------------------------------------------ #
-
-def _extract(transcript: str, patterns: list) -> str:
+def _first(transcript, patterns):
     for pat in patterns:
         m = re.search(pat, transcript, re.IGNORECASE)
         if m:
@@ -39,38 +27,37 @@ def _extract(transcript: str, patterns: list) -> str:
     return ""
 
 
-def parse_intake(transcript: str) -> dict:
+def parse_intake(transcript):
     if not transcript:
         return {}
 
-    name = _extract(transcript, [
-        r"(?:my name is|name\'s|i\'m|this is)\s+([A-Z][a-z]+(?: [A-Z][a-z]+)+)",
-        r"([A-Z][a-z]+ [A-Z][a-z]+)(?=,| here| speaking)",
+    name = _first(transcript, [
+        "(?:my name is|this is|speaking)\\s+([A-Z][a-z]+ [A-Z][a-z]+)",
+        "([A-Z][a-z]+ [A-Z][a-z]+)(?=,| here| speaking)",
     ])
 
-    phone_raw = _extract(transcript, [
-        r"(\(?\d{3}\)?[\s.\-]\d{3}[\s.\-]\d{4})",
+    phone_raw = _first(transcript, [
+        "(\\(?\\d{3}\\)?[\\s.\\-]\\d{3}[\\s.\\-]\\d{4})",
     ])
     phone = ""
     if phone_raw:
-        digits = re.sub(r"[^\d]", "", phone_raw)
+        digits = re.sub("[^\\d]", "", phone_raw)
         if len(digits) == 10:
-            phone = f"+1{digits}"
+            phone = "+1" + digits
         elif len(digits) == 11 and digits.startswith("1"):
-            phone = f"+{digits}"
+            phone = "+" + digits
 
-    email = _extract(transcript, [
-        r"([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})",
+    email = _first(transcript, [
+        "([a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,})",
     ])
 
-    address = _extract(transcript, [
-        r"(?:address|live at|located at)\s+(.{10,80}(?:TX|Texas|\d{5}))",
-        r"(\d+ [A-Z][a-zA-Z\s]{3,40}(?:St|Ave|Blvd|Dr|Ln|Rd|Way|Ct|Pl)[.,\s]*(?:TX|Texas)?\s*\d{5}?)",
+    zip_code = _first(transcript, [
+        "(?:zip|postal)[^\\d]*(\\d{5})",
+        "\\b(7[5-9]\\d{3}|7[0-4]\\d{3})\\b",
     ])
 
-    zip_code = _extract(transcript, [
-        r"(?:zip|postal)[^\d]*(\d{5})",
-        r"\b(7[5-9]\d{3}|7[0-4]\d{3})\b",
+    address = _first(transcript, [
+        "(?:address|live at|located at)\\s+(.{10,80}(?:TX|Texas|\\d{5}))",
     ])
 
     t = transcript.lower()
@@ -94,63 +81,52 @@ def parse_intake(transcript: str) -> dict:
     }
 
 
-# ------------------------------------------------------------------ #
-#  SUPABASE LOGGER                                                     #
-# ------------------------------------------------------------------ #
-
-async def _save_supabase(record: dict):
+async def _save_supabase(record):
     if not SUPABASE_URL or not SUPABASE_KEY:
         return
     try:
         import httpx
         headers = {
             "apikey": SUPABASE_KEY,
-            "Authorization": f"Bearer {SUPABASE_KEY}",
+            "Authorization": "Bearer " + SUPABASE_KEY,
             "Content-Type": "application/json",
             "Prefer": "return=minimal",
         }
         async with httpx.AsyncClient(timeout=10) as client:
             resp = await client.post(
-                f"{SUPABASE_URL}/rest/v1/vapi_calls",
+                SUPABASE_URL + "/rest/v1/vapi_calls",
                 headers=headers,
                 json=record,
             )
             if resp.status_code not in (200, 201):
-                log.warning(f"Supabase vapi_calls: {resp.status_code} {resp.text[:200]}")
+                log.warning("Supabase vapi_calls: %s %s", resp.status_code, resp.text[:200])
     except Exception as exc:
-        log.error(f"Supabase error: {exc}")
+        log.error("Supabase error: %s", exc)
 
-
-# ------------------------------------------------------------------ #
-#  MAIN WEBHOOK ENDPOINT                                               #
-# ------------------------------------------------------------------ #
 
 @router.post("/vapi")
 async def vapi_webhook(request: Request, background_tasks: BackgroundTasks):
-    """
-    Single endpoint for ALL Vapi server events.
-    Vapi wraps payloads in: { "message": { "type": "...", ... } }
-    """
+    """Single endpoint for ALL Vapi server events."""
     try:
         payload = await request.json()
     except Exception:
-        log.warning("Vapi webhook: invalid JSON body")
+        log.warning("Vapi webhook: invalid JSON")
         return {"received": False}
 
     msg = payload.get("message", payload)
     msg_type = msg.get("type", "unknown")
-    log.info(f"Vapi event: {msg_type}")
+    log.info("Vapi event: %s", msg_type)
 
     if msg_type in ("end-of-call-report", "call-end"):
         background_tasks.add_task(_on_call_end, msg)
         return {"received": True, "action": "processing"}
 
     if msg_type == "call-start":
-        log.info(f"Call started: {msg.get('call', {}).get('id', '')}")
+        log.info("Call started: %s", msg.get("call", {}).get("id", ""))
         return {"received": True}
 
     if msg_type == "status-update":
-        log.info(f"Status: {msg.get('status')} call={msg.get('call', {}).get('id', '')}")
+        log.info("Status: %s", msg.get("status"))
         return {"received": True}
 
     if msg_type == "tool-calls":
@@ -168,20 +144,16 @@ async def vapi_webhook(request: Request, background_tasks: BackgroundTasks):
     return {"received": True, "type": msg_type}
 
 
-# ------------------------------------------------------------------ #
-#  CALL-END HANDLER                                                    #
-# ------------------------------------------------------------------ #
-
-async def _on_call_end(msg: dict):
-    call         = msg.get("call", msg)
-    call_id      = call.get("id", "")
-    transcript   = msg.get("transcript", "") or call.get("transcript", "")
-    recording    = msg.get("recordingUrl", "") or call.get("recordingUrl", "")
-    duration     = msg.get("durationSeconds", 0) or call.get("durationSeconds", 0)
+async def _on_call_end(msg):
+    call = msg.get("call", msg)
+    call_id = call.get("id", "")
+    transcript = msg.get("transcript", "") or call.get("transcript", "")
+    recording = msg.get("recordingUrl", "") or call.get("recordingUrl", "")
+    duration = msg.get("durationSeconds", 0) or call.get("durationSeconds", 0)
     ended_reason = msg.get("endedReason", "") or call.get("endedReason", "")
     caller_phone = call.get("customer", {}).get("number", "") or call.get("phoneNumber", "")
 
-    log.info(f"call-end: id={call_id} duration={duration}s reason={ended_reason}")
+    log.info("call-end: id=%s duration=%ss reason=%s", call_id, duration, ended_reason)
 
     intake = parse_intake(transcript)
     if not intake.get("phone") and caller_phone:
@@ -203,29 +175,24 @@ async def _on_call_end(msg: dict):
         "location": intake.get("address") or intake.get("zip_code", ""),
         "life_event": "insurance_inquiry",
         "outreach_message": "",
-        "enrichment_reasoning": (
-            f"Inbound Vapi call {call_id}. "
-            f"Duration: {duration}s. Ended: {ended_reason}."
-        ),
+        "enrichment_reasoning": "Inbound Vapi call " + call_id + ". Duration: " + str(duration) + "s. Ended: " + ended_reason + ".",
         "carrier_recommendation": "We Insure",
         "source": "vapi_inbound",
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
 
-    # Push to HubSpot
     if HUBSPOT_KEY:
         try:
             from services.hubspot import push_lead_to_hubspot
             contact_id = await push_lead_to_hubspot(lead)
             if contact_id:
                 lead["hubspot_contact_id"] = contact_id
-                log.info(f"HubSpot contact created: {contact_id}")
+                log.info("HubSpot contact created: %s", contact_id)
         except Exception as exc:
-            log.error(f"HubSpot push failed: {exc}")
+            log.error("HubSpot push failed: %s", exc)
     else:
-        log.warning("HUBSPOT_API_KEY not set — skipping HubSpot push")
+        log.warning("HUBSPOT_API_KEY not set")
 
-    # Save to Supabase
     await _save_supabase({
         "call_id":            call_id,
         "caller_phone":       intake.get("phone") or caller_phone,
@@ -244,8 +211,4 @@ async def _on_call_end(msg: dict):
         "created_at":         datetime.now(timezone.utc).isoformat(),
     })
 
-    log.info(
-        f"call-end complete: id={call_id} "
-        f"transferred={transferred} "
-        f"hubspot={lead.get('hubspot_contact_id', 'none')}"
-    )
+    log.info("call-end done: id=%s transferred=%s hubspot=%s", call_id, transferred, lead.get("hubspot_contact_id", "none"))
