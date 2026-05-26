@@ -9,6 +9,7 @@ log = logging.getLogger("LeadOS")
 
 app = FastAPI(title="LeadOS", version="3.2")
 
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -83,6 +84,8 @@ app.add_middleware(
 from routers.leads import router as leads_router
 app.include_router(leads_router)
 from routers.content_engine import content_engine_router
+from routers.vapi_webhook import router as vapi_webhook_router
+app.include_router(vapi_webhook_router)
 app.include_router(content_engine_router)
 
 
