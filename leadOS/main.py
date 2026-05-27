@@ -18,6 +18,11 @@ log.info(f"=== APP DEFINED: {app} ===")
 from routers.content_engine_router import content_engine_router
 app.include_router(content_engine_router)
 
+# Vapi inbound webhook → HubSpot + Supabase
+from routers.vapi_webhook import router as vapi_webhook_router
+app.include_router(vapi_webhook_router)
+log.info("=== VAPI WEBHOOK REGISTERED at /webhook/vapi ===")
+
 @app.get("/health")
 async def health():
     return {"status": "ok", "version": "2.1.0"}
