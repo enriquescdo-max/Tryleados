@@ -386,7 +386,7 @@ export default function Dashboard() {
       <div className="px-6 py-4">
         {error && (
           <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-[10px] text-sm text-red-600">
-            ⚠️ Backend connecting — click Run New Scrape to pull fresh leads
+            ⚠️ Showing sample leads — live backend unavailable right now
           </div>
         )}
 
