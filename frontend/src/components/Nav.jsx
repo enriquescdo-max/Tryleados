@@ -21,6 +21,25 @@ export default function Nav() {
         <NavLink to="/campaigns"     className={({ isActive }) => isActive ? active : inactive}>Campaigns</NavLink>
         <NavLink to="/content-engine"  className={({ isActive }) => isActive ? active : inactive}>⚡ Content</NavLink>
       </nav>
+
+      <div className="flex items-center gap-2 ml-4 pl-4 border-l border-gray-200">
+        <a
+          href="https://buy.stripe.com/test_9B64gscXAc6z42Z05f2B203"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="px-3 py-2 text-xs font-medium text-[#6B6B6B] hover:text-[#1A1A1A] transition-all"
+        >
+          Pay now →
+        </a>
+        <a
+          href="https://calendly.com/enriquescdo-1/30min"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="px-4 py-2 text-sm font-semibold rounded-lg bg-[#00A86B] text-white hover:bg-[#009960] transition-all"
+        >
+          Book a Demo →
+        </a>
+      </div>
     </div>
   );
 }
