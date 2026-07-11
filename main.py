@@ -80,12 +80,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from routers.leads import router as leads_router
-app.include_router(leads_router)
-from routers.content_engine import content_engine_router
-from routers.vapi_webhook import router as vapi_webhook_router
-app.include_router(vapi_webhook_router)
-app.include_router(content_engine_router)
+try:
+    from routers.vapi_webhook import router as vapi_webhook_router
+    app.include_router(vapi_webhook_router)
+    log.info("vapi_webhook loaded")
+except Exception as e:
+    log.warning(f"vapi_webhook failed: {e}")
+
+try:
+    from routers.content_engine_router import content_engine_router
+    app.include_router(content_engine_router)
+    log.info("content_engine loaded")
+except Exception as e:
+    log.warning(f"content_engine failed: {e}")
 
 
 
