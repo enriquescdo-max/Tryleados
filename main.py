@@ -9,15 +9,6 @@ log = logging.getLogger("LeadOS")
 
 app = FastAPI(title="LeadOS", version="3.2")
 
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 # ── Routers ──────────────────────────────────────────────────────────────────
 try:
     from routers.carrier_scorer import router as carrier_scorer_router
@@ -74,7 +65,12 @@ except Exception as e:
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://TryleadOS.com", "http://localhost:3000"],
+    allow_origins=[
+        "https://tryleados.com",
+        "https://www.tryleados.com",
+        "http://localhost:3000",
+        "http://localhost:5173",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
