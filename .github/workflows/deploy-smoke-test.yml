@@ -1,0 +1,31 @@
+name: Deploy smoke test
+
+# Runs the same checks that caught the bug that silently broke every Railway
+# deploy for weeks: an unguarded router import raising ImportError, or a
+# router module with a plain SyntaxError. Both crash main.py at import time
+# with no visible error in the running app — Railway just keeps serving the
+# last successful build, so the site looks "up" while every current route
+# actually 404s. This workflow makes that failure loud and immediate instead
+# of silent and permanent.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install backend dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run deploy smoke test
+        run: python tests/deploy_smoke_test.py
