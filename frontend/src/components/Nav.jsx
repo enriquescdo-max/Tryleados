@@ -1,5 +1,11 @@
 import { NavLink } from "react-router-dom";
 
+// Stripe live account hasn't finished business verification — only a
+// test-mode checkout exists. Paste the live payment link here when ready;
+// the Pay now button stays hidden while this is empty.
+const STRIPE_PAYMENT_LINK = "";
+const CALENDLY_URL = "https://calendly.com/enriquescdo-1/30min";
+
 export default function Nav() {
   const base = "px-4 py-2 text-sm font-medium rounded-lg transition-all";
   const active = `${base} bg-[#E05A1A] text-white`;
@@ -23,16 +29,18 @@ export default function Nav() {
       </nav>
 
       <div className="flex items-center gap-2 ml-4 pl-4 border-l border-gray-200">
+        {STRIPE_PAYMENT_LINK && (
+          <a
+            href={STRIPE_PAYMENT_LINK}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3 py-2 text-xs font-medium text-[#6B6B6B] hover:text-[#1A1A1A] transition-all"
+          >
+            Pay now →
+          </a>
+        )}
         <a
-          href="https://buy.stripe.com/test_9B64gscXAc6z42Z05f2B203"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="px-3 py-2 text-xs font-medium text-[#6B6B6B] hover:text-[#1A1A1A] transition-all"
-        >
-          Pay now →
-        </a>
-        <a
-          href="https://calendly.com/enriquescdo-1/30min"
+          href={CALENDLY_URL}
           target="_blank"
           rel="noopener noreferrer"
           className="px-4 py-2 text-sm font-semibold rounded-lg bg-[#00A86B] text-white hover:bg-[#009960] transition-all"
