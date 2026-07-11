@@ -25,6 +25,20 @@
   renders with the correct Calendly href; Pay now is absent; dashboard
   unaffected.
 
+**Railway deep-dive (verified in dashboard):**
+- MOCK_MODE=false confirmed live. HUBSPOT_API_KEY, STRIPE_SECRET_KEY,
+  SUPABASE_URL/SERVICE_KEY, VAPI, HEYGEN, INSTANTLY, APIFY, ANTHROPIC
+  all present as service variables.
+- ROOT CAUSE of the stale backend: the Tryleados service (project
+  "miraculous-motivation") has Root Directory = "leadOS", so Railway
+  builds only that subfolder — the stripped v2.1.0 app with no leads
+  routes. GitHub auto-deploy IS working (latest commit deployed
+  successfully); it just deploys the wrong subtree.
+- Fix: clear the Root Directory field (Service → Settings → Source) so
+  the repo root deploys. Pre-verified in a clean venv: root main.py
+  imports cleanly, /health + /api/leads + /api/leads/stats return 200,
+  39 routes present. railway.toml healthcheck (/health) guards cutover.
+
 **Manual follow-ups:**
 1. Complete Stripe live-mode activation, create the live $49/mo payment
    link, paste it into STRIPE_PAYMENT_LINK in
