@@ -39,6 +39,24 @@
   imports cleanly, /health + /api/leads + /api/leads/stats return 200,
   39 routes present. railway.toml healthcheck (/health) guards cutover.
 
+## 2026-07-15 — Backend go-live (Claude Code session, continued)
+
+- Root Directory cleared in Railway (by Enrique); first repo-root build
+  failed: repo's nixpacks.toml pulled the pip-less python311 Nix package
+  then called bare `pip` (exit 127). Removed nixpacks.toml + added
+  .python-version (74817bd); Railway's Python provider then built clean.
+- VERIFIED LIVE: /health + / report v3.2, /api/leads and
+  /api/leads/stats return 200, 79 routes in openapi.json. Healthcheck
+  kept the old deployment serving during both failed/new builds — no
+  downtime observed.
+- REMAINING BLOCKER: Supabase. Railway's SUPABASE_URL points at the
+  project documented in CLAUDE.md, whose hostname no longer resolves
+  (free-tier projects pause after inactivity; paused/deleted projects
+  drop DNS). /api/leads therefore returns leads:[] with a DNS error and
+  no data can persist. The other known project ref does resolve. Needs
+  a decision in the Supabase dashboard (restore vs. re-point), fresh
+  keys, and the Section-6 migration from CLAUDE.md if tables are absent.
+
 **Manual follow-ups:**
 1. Complete Stripe live-mode activation, create the live $49/mo payment
    link, paste it into STRIPE_PAYMENT_LINK in
