@@ -26,6 +26,7 @@ export default function Nav() {
         <NavLink to="/scorer"        className={({ isActive }) => isActive ? active : inactive}>Carrier Scorer</NavLink>
         <NavLink to="/campaigns"     className={({ isActive }) => isActive ? active : inactive}>Campaigns</NavLink>
         <NavLink to="/content-engine"  className={({ isActive }) => isActive ? active : inactive}>⚡ Content</NavLink>
+        <NavLink to="/leadscout"       className={({ isActive }) => isActive ? active : inactive}>🔍 LeadScout</NavLink>
       </nav>
 
       <div className="flex items-center gap-2 ml-4 pl-4 border-l border-gray-200">
