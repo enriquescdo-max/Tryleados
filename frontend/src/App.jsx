@@ -7,6 +7,7 @@ import CarrierScorer from "./pages/CarrierScorer";
 import Campaigns from "./pages/Campaigns";
 import ContentEngine from "./components/ContentEngine";
 import LeadScout from "./pages/LeadScout";
+import GetQuote from "./pages/GetQuote";
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
         <Route path="/campaigns" element={<Campaigns />} />
         <Route path="/content-engine" element={<ContentEngine />} />
         <Route path="/leadscout" element={<LeadScout />} />
+        <Route path="/quote" element={<GetQuote />} />
       </Routes>
     </Router>
   );

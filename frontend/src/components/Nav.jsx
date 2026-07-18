@@ -40,11 +40,17 @@ export default function Nav() {
             Pay now →
           </a>
         )}
+        <NavLink
+          to="/quote"
+          className="px-4 py-2 text-sm font-semibold rounded-lg bg-[#00A86B] text-white hover:bg-[#009960] transition-all"
+        >
+          Get a Quote
+        </NavLink>
         <a
           href={CALENDLY_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="px-4 py-2 text-sm font-semibold rounded-lg bg-[#00A86B] text-white hover:bg-[#009960] transition-all"
+          className="px-4 py-2 text-sm font-medium rounded-lg border border-gray-200 text-[#1A1A1A] hover:bg-gray-50 transition-all"
         >
           Book a Demo →
         </a>
