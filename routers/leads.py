@@ -47,6 +47,7 @@ async def get_stats():
         return {"total":0,"new":0,"contacted":0,"quoted":0,"closed":0,"hot_leads":0,"by_type":{}}
 
 
+@router.get("")
 @router.get("/")
 async def get_leads(status: str = None, min_urgency: int = 1):
     db = get_supabase()
