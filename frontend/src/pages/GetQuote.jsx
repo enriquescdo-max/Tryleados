@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const LEADSCOUT_API =
   import.meta.env.VITE_LEADSCOUT_URL || "https://leadscout-production-b570.up.railway.app";
@@ -15,6 +15,39 @@ const COVERAGE = [
 const inputCls =
   "w-full px-4 py-3 rounded-lg border border-gray-200 bg-white text-[#1A1A1A] text-sm focus:outline-none focus:ring-2 focus:ring-[#00A86B] focus:border-transparent";
 
+const ATTRIBUTION_KEY = "leados_attribution";
+
+// Ad clicks land with ?utm_* params, but visitors often browse before converting.
+// Capture attribution on first load and keep it for the rest of the session.
+function captureAttribution() {
+  const params = new URLSearchParams(window.location.search);
+  const fromUrl = {
+    utm_source: params.get("utm_source") || "",
+    utm_medium: params.get("utm_medium") || "",
+    utm_campaign: params.get("utm_campaign") || "",
+    utm_content: params.get("utm_content") || "",
+  };
+
+  if (Object.values(fromUrl).some(Boolean)) {
+    const captured = { ...fromUrl, referrer: document.referrer || "" };
+    try {
+      sessionStorage.setItem(ATTRIBUTION_KEY, JSON.stringify(captured));
+    } catch {
+      // Private browsing can block storage; the in-memory value still works for this page view.
+    }
+    return captured;
+  }
+
+  try {
+    const stored = sessionStorage.getItem(ATTRIBUTION_KEY);
+    if (stored) return JSON.parse(stored);
+  } catch {
+    // Ignore unreadable storage and fall through to referrer-only attribution.
+  }
+
+  return { utm_source: "", utm_medium: "", utm_campaign: "", utm_content: "", referrer: document.referrer || "" };
+}
+
 export default function GetQuote() {
   const [form, setForm] = useState({
     first_name: "",
@@ -30,6 +63,11 @@ export default function GetQuote() {
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState(null);
+  const [attribution, setAttribution] = useState({});
+
+  useEffect(() => {
+    setAttribution(captureAttribution());
+  }, []);
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
@@ -45,7 +83,7 @@ export default function GetQuote() {
       const res = await fetch(`${LEADSCOUT_API}/api/consumer-leads`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, insurance_types: types, tcpa_consent: consent }),
+        body: JSON.stringify({ ...form, ...attribution, insurance_types: types, tcpa_consent: consent }),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || "Something went wrong");
