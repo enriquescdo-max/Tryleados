@@ -9,7 +9,7 @@ import asyncio
 import logging
 from datetime import datetime
 from typing import Optional
-from fastapi import APIRouter, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel
 
 log = logging.getLogger("LeadOS.Outreach")
@@ -80,10 +80,14 @@ async def list_avatars():
 
 @router.post("/call/start")
 async def start_call(req: CallRequest):
-    """Initiate a Vapi warm transfer call to a lead. Blocked outside M-F 8am-5pm CT."""
+    """AI outbound calls stay off unless explicitly enabled and written consent is on file."""
+    from core.compliance import contact_decision
+    lead = req.lead or {}
+    decision = contact_decision(channel="ai_call", consents=lead.get("consents") or [])
+    if not decision.allowed:
+        raise HTTPException(status_code=403, detail=decision.reason)
     try:
         from services.vapi_service import create_call, is_call_compliant
-        lead = req.lead or {}
 
         # Compliance check first
         state = (lead.get("location") or "TX").split()[-1] if lead else "TX"
@@ -137,7 +141,11 @@ async def recent_calls(limit: int = 20):
 
 @router.post("/sequence/enroll")
 async def enroll_in_sequence(req: SequenceRequest):
-    """Enroll a lead in an Instantly email sequence."""
+    """Enroll a lead in an Instantly email sequence. Off unless outreach and consent allow it."""
+    from core.compliance import contact_decision
+    decision = contact_decision(channel="email", consents=(req.lead or {}).get("consents") or [])
+    if not decision.allowed:
+        raise HTTPException(status_code=403, detail=decision.reason)
     try:
         from services.instantly_service import add_lead_to_campaign, create_campaign
 
@@ -192,10 +200,11 @@ async def campaign_stats(campaign_id: str):
 
 @router.post("/bulk")
 async def bulk_outreach(req: BulkOutreachRequest, background_tasks: BackgroundTasks):
-    """
-    Fire outreach across multiple channels for a batch of leads.
-    Runs in background — returns immediately with job summary.
-    """
+    """Bulk send is disabled. This does not email, text, or call anyone."""
+    from core.compliance import contact_decision
+    decision = contact_decision(channel="bulk", consents=[])
+    if not decision.allowed:
+        raise HTTPException(status_code=403, detail=decision.reason)
     background_tasks.add_task(_run_bulk_outreach, req.leads, req.channels, req.hypothesis_id)
     return {
         "status": "queued",
@@ -207,7 +216,11 @@ async def bulk_outreach(req: BulkOutreachRequest, background_tasks: BackgroundTa
 
 
 async def _run_bulk_outreach(leads: list, channels: list, hypothesis_id: str):
-    """Background task — fire outreach per lead per channel."""
+    """Background task. Does not run unless automatic outreach is explicitly on, and still skips AI calls."""
+    from core.compliance import ai_outbound_enabled, auto_outreach_enabled, contact_decision
+    if not auto_outreach_enabled():
+        log.warning("Bulk outreach skipped: automatic outreach is off.")
+        return
     from services.heygen import generate_video
     from services.vapi_service import create_call
     from services.instantly_service import add_lead_to_campaign
@@ -219,10 +232,12 @@ async def _run_bulk_outreach(leads: list, channels: list, hypothesis_id: str):
                 log.info(f"Video queued for {lead.get('raw_name')}: {video_result.get('video_id')}")
                 await asyncio.sleep(0.5)
 
-            if "call" in channels:
-                call_result = await create_call(lead)
-                log.info(f"Call initiated for {lead.get('raw_name')}: {call_result.get('call_id')}")
-                await asyncio.sleep(2)  # Rate limit between calls
+            if "call" in channels and ai_outbound_enabled():
+                call_decision = contact_decision(channel="ai_call", consents=lead.get("consents") or [])
+                if call_decision.allowed:
+                    call_result = await create_call(lead)
+                    log.info(f"Call initiated for {lead.get('raw_name')}: {call_result.get('call_id')}")
+                    await asyncio.sleep(2)
 
             if "email" in channels and lead.get("email"):
                 pass  # Handled via /sequence/enroll

@@ -3,7 +3,7 @@
 ## Outreach Compliance
 - Governed by Texas Department of Insurance (TDI)
 - Must be licensed in TX to solicit P&C insurance
-- TCPA applies to all outbound calls/texts — verbal consent required before dialing mobile numbers
+- TCPA and Texas telemarketing rules apply to outbound calls and texts. Prior express written consent is required before an AI or autodialed call and before a marketing text. Verbal consent on a cold call is not enough for those. A scraped post is not consent. Check the federal and Texas do-not-call lists before any manual call.
 - DNC registry check required before cold calling
 - SB 942 (CA) does not apply to TX residents
 

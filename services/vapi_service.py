@@ -103,27 +103,29 @@ def is_call_compliant(phone: str = "", state: str = "TX", override: bool = False
 
 
 VAPI_BASE        = "https://api.vapi.ai"
-AGENT_PHONE      = os.getenv("VAPI_PHONE_NUMBER_ID", "")  # Your Vapi phone number ID
-ENRIQUE_PHONE    = os.getenv("ENRIQUE_PHONE", "+18325551234")  # Your real cell
+AGENT_PHONE      = os.getenv("VAPI_PHONE_NUMBER_ID", "")
+ENRIQUE_PHONE    = os.getenv("ENRIQUE_PHONE") or os.getenv("OWNER_PHONE") or ""
 
 
-ARIA_SYSTEM_PROMPT = """You are Aria, a friendly insurance intake specialist for Enrique Saucedo at We Insure in Austin, Texas.
+ARIA_SYSTEM_PROMPT = """You are Aria, an AI assistant for a licensed P&C agent in Austin, Texas.
 
-Your job: quickly qualify whether this person needs insurance and transfer them to Enrique.
+Say you are an AI in the first sentence. You are not a licensed agent. You do not quote prices, bind coverage, or explain what a policy covers.
+
+This outbound call is allowed only when prior express written consent is already on file. If the person says they did not agree to be called, apologize and end the call.
 
 Qualification script:
-1. "Hi, is this {first_name}? I'm Aria calling on behalf of Enrique at We Insure in Austin."
-2. "I'm reaching out because it looks like you may be in the market for {policy_type} insurance — is that right?"
-3. If yes: "Great! What ZIP code would the coverage be for?"
+1. "Hi, this is Aria, an AI assistant calling for a licensed agent in Austin. Am I speaking with {first_name}?"
+2. "Our records show you asked about {policy_type} insurance. Is that right?"
+3. If yes: "What ZIP code would the coverage be for?"
 4. "Have you had any gaps in coverage in the last 12 months?"
 5. "Are you looking to get coverage started soon, or is this more exploratory?"
 
-If they say yes to needing coverage: "Perfect — Enrique is available right now. Let me connect you — just stay on the line."
+If they want the licensed agent: "I can transfer you. Please stay on the line."
 Then call the transfer function.
 
-If they're not interested: "No problem at all! If things change, feel free to call us. Have a great day!"
+If they're not interested: "No problem. I will not call again. Have a good day."
 
-Keep responses SHORT — 1-2 sentences max. Sound human, not robotic. Don't mention you're an AI unless asked directly."""
+Keep responses to 1-2 sentences. Do not claim that property and casualty outreach needs no consent."""
 
 
 async def create_call(lead: dict) -> dict:
@@ -131,6 +133,17 @@ async def create_call(lead: dict) -> dict:
     Initiate a Vapi outbound call to a lead.
     Returns the call object with call_id.
     """
+    from core.compliance import contact_decision
+    decision = contact_decision(channel="ai_call", consents=lead.get("consents") or [])
+    if not decision.allowed:
+        log.warning("Call blocked: %s", decision.reason)
+        return {
+            "status": "blocked",
+            "compliant": False,
+            "reason": decision.reason,
+            "message": decision.reason,
+        }
+
     if not VAPI_API_KEY:
         return {"error": "VAPI_API_KEY not set", "status": "skipped"}
 

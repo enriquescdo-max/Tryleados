@@ -140,6 +140,8 @@ async def save_to_supabase(payload, intake, hubspot_id):
 
 @router.post("/vapi")
 async def vapi_webhook(request: Request):
+    from core.webhook_auth import require_vapi_secret
+    require_vapi_secret(request)
     try:
         payload = await request.json()
     except Exception as e:

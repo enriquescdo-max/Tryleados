@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { authHeaders } from "../api";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
@@ -82,8 +83,8 @@ export default function Campaigns() {
 
   async function api(path, opts = {}) {
     const res = await fetch(`${API}/api/v1/campaigns${path}`, {
-      headers: { "Content-Type": "application/json" },
       ...opts,
+      headers: authHeaders({ "Content-Type": "application/json", ...(opts.headers || {}) }),
     });
     if (!res.ok) throw new Error(`${res.status}`);
     return res.json();

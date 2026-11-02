@@ -108,7 +108,6 @@ input::placeholder{color:#2d3f5a}
   </div>
 
   <button class="signin-btn" id="signBtn" onclick="emailLogin()">Sign In →</button>
-  <button class="demo-btn" onclick="demoLogin()">⚡ Demo Login — try without an account</button>
 
   <div class="trust">
     <span>No contracts</span>
@@ -122,11 +121,11 @@ input::placeholder{color:#2d3f5a}
   <a href="mailto:support@TryleadOS.com">Support</a>
 </div>
 
-<!-- Load Supabase with multiple fallbacks -->
+<!-- Supabase keys are not embedded in this page. Sign in on the dashboard. -->
 <script>
-window.SB_URL = 'https://vvsshirbxfypjvrdmgls.supabase.co';
-window.SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2c3NoaXJieGZ5cGp2cmRtZ2xzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NTIwODQsImV4cCI6MjA4OTMyODA4NH0.XtNj4zIamNNUbo3Hhpu4dayzhT9XvwMZY1PhP9vLybY';
-window.DASH = 'https://TryleadOS.com/leadOS-dashboard.html';
+window.SB_URL = window.LEADOS_SUPABASE_URL || '';
+window.SB_KEY = window.LEADOS_SUPABASE_ANON_KEY || '';
+window.DASH = '/';
 
 function loadSupabase(urls, idx) {
   if (idx >= urls.length) {
@@ -148,6 +147,11 @@ var CDN_URLS = [
 ];
 
 function initApp() {
+  if (!window.SB_URL || !window.SB_KEY) {
+    document.getElementById('msgErr').textContent = 'This page no longer stores a database key. Sign in on the dashboard.';
+    document.getElementById('msgErr').classList.add('show');
+    return;
+  }
   if (!window.supabase) {
     document.getElementById('msgErr').textContent = 'Auth library not available. Please refresh.';
     document.getElementById('msgErr').classList.add('show');
@@ -225,11 +229,6 @@ function emailLogin() {
   btn.disabled = true;
   btn.innerHTML = '<span class="spin"></span>Signing in...';
 
-  if (email === 'admin@leadOS.ai' && pw === 'LeadOS2024!') {
-    saveAndGo({ id: 'demo', email: email, user_metadata: { full_name: 'Demo User' }}, 'demo');
-    return;
-  }
-
   sb.auth.signInWithPassword({ email: email, password: pw }).then(function(res) {
     if (res.error) {
       msg('err', res.error.message.includes('Invalid') ? 'Incorrect email or password.' : res.error.message);
@@ -249,10 +248,7 @@ function forgotPw() {
 }
 
 function demoLogin() {
-  document.getElementById('em').value = 'admin@leadOS.ai';
-  document.getElementById('pw').value = 'LeadOS2024!';
-  msg('inf', 'Demo credentials loaded...');
-  setTimeout(emailLogin, 400);
+  msg('err', 'Demo login is turned off. Sign in on the dashboard with the owner account.');
 }
 
 // Start loading Supabase

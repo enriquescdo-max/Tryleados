@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { authHeaders } from "../api";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
@@ -57,7 +58,7 @@ export default function CarrierScorer() {
 
       const res = await fetch(`${API}/api/v1/carrier-score`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(body),
       });
 
