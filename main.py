@@ -29,6 +29,21 @@ try:
 except Exception as e:
     log.warning(f"auth failed: {e}")
 
+try:
+    from routers.voice_intake import router as voice_intake_router
+    from routers.callbacks import router as callbacks_router
+    from routers.followups import router as followups_router
+    from routers.metrics import router as metrics_router
+    from routers.public_leads import router as public_leads_router
+    app.include_router(voice_intake_router)
+    app.include_router(callbacks_router)
+    app.include_router(followups_router)
+    app.include_router(metrics_router)
+    app.include_router(public_leads_router)
+    log.info("voice intake, callbacks, followups, metrics loaded")
+except Exception as e:
+    log.warning(f"voice routes failed: {e}")
+
 # ── Routers ──────────────────────────────────────────────────────────────────
 try:
     from routers.carrier_scorer import router as carrier_scorer_router

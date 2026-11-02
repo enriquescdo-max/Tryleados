@@ -23,6 +23,18 @@ def get_supabase():
 
 @router.get("/stats")
 async def get_stats():
+    from services.agency_store import get_store, use_supabase
+    if not use_supabase():
+        leads = get_store().list_leads()
+        return {
+            "total": len(leads),
+            "new": len([l for l in leads if l.get("status") == "new"]),
+            "contacted": len([l for l in leads if l.get("status") == "contacted"]),
+            "quoted": len([l for l in leads if l.get("status") == "quoted"]),
+            "closed": len([l for l in leads if l.get("status") == "closed"]),
+            "hot_leads": len([l for l in leads if (l.get("urgency_score") or 0) >= 8]),
+            "by_type": {},
+        }
     db = get_supabase()
     if not db:
         return {"total":0,"new":0,"contacted":0,"quoted":0,"closed":0,"hot_leads":0,"by_type":{}}
@@ -50,6 +62,14 @@ async def get_stats():
 @router.get("")
 @router.get("/")
 async def get_leads(status: str = None, min_urgency: int = 1):
+    from services.agency_store import get_store, use_supabase
+    if not use_supabase():
+        leads = get_store().list_leads()
+        if status:
+            leads = [lead for lead in leads if lead.get("status") == status]
+        if min_urgency > 1:
+            leads = [lead for lead in leads if (lead.get("urgency_score") or 0) >= min_urgency]
+        return {"leads": leads, "count": len(leads)}
     db = get_supabase()
     if not db:
         return {"leads": [], "count": 0, "error": "Database not connected"}

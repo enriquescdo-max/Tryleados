@@ -10,6 +10,8 @@ import ContentEngine from "./components/ContentEngine";
 import LeadScout from "./pages/LeadScout";
 import GetQuote from "./pages/GetQuote";
 import Login from "./pages/Login";
+import Callbacks from "./pages/Callbacks";
+import Metrics from "./pages/Metrics";
 import { getToken } from "./api";
 
 export default function App() {
@@ -38,6 +40,8 @@ export default function App() {
                   <Route path="/campaigns" element={<Campaigns />} />
                   <Route path="/content-engine" element={<ContentEngine />} />
                   <Route path="/leadscout" element={<LeadScout />} />
+                  <Route path="/callbacks" element={<Callbacks />} />
+                  <Route path="/metrics" element={<Metrics />} />
                 </Routes>
               </>
             ) : (
