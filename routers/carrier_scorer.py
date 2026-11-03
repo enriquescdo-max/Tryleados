@@ -373,10 +373,13 @@ async def score_carriers(req: CarrierScoreRequest):
     strategy_note = _build_strategy_note(req, results, cat_zone, state)
 
     compliance_note = (
-        "TX: Insurance solicitation governed by TDI. Verify TCPA consent before dialing. "
-        "No prior written consent required for property/casualty inquiries under TX Ins. Code §541."
+        "Texas property and casualty solicitation is governed by TDI. "
+        "You must be licensed to solicit. TCPA and Texas telemarketing rules require "
+        "prior express written consent before any AI or autodialed call and before any marketing text. "
+        "A scraped post is not consent. Check the federal and Texas do-not-call lists before a manual call."
     ) if state == "TX" else (
-        "Verify state-specific solicitation rules before outreach. Check DNC registry."
+        "Verify that state's solicitation rules and the do-not-call list. "
+        "Prior express written consent is required for AI or autodialed calls and for marketing texts."
     )
 
     return CarrierScoreResponse(

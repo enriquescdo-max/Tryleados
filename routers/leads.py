@@ -118,7 +118,7 @@ async def scrape_enrich_save():
         from services.enrichment import enrich_all_leads
         from services.hubspot import push_lead_to_hubspot
 
-        print("[LeadOS] Starting scrape pipeline...")
+        print("[LeadOS] Starting scrape pipeline. This saves leads only. It does not text, email, or call anyone.")
         raw_leads = await scrape_all_sources()
         print(f"[LeadOS] Scraped {len(raw_leads)} raw leads")
         enriched_leads = await enrich_all_leads(raw_leads)

@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { authHeaders } from "../api";
 
 const API = "https://tryleados-production.up.railway.app";
 
@@ -113,7 +114,7 @@ export default function ContentEngine() {
 
   const loadQueue = async () => {
     try {
-      const r = await fetch(`${API}/agents/content-engine/queue`);
+      const r = await fetch(`${API}/agents/content-engine/queue`, { headers: authHeaders() });
       const d = await r.json();
       setQueue(d.queue||[]);
     } catch(e) { console.error(e); }
@@ -125,8 +126,8 @@ export default function ContentEngine() {
   const handleGenerate = async () => {
     setGenerating(true);
     try {
-      await fetch(`${API}/agents/content-engine/scrape`,{method:"POST"});
-      await fetch(`${API}/agents/content-engine/bulk-remix`,{method:"POST"});
+      await fetch(`${API}/agents/content-engine/scrape`,{method:"POST", headers: authHeaders()});
+      await fetch(`${API}/agents/content-engine/bulk-remix`,{method:"POST", headers: authHeaders()});
       await loadQueue();
       showToast("⚡ New batch generated","#E05A1A");
     } catch(e) { showToast("Error generating","#EF4444"); }
@@ -136,7 +137,7 @@ export default function ContentEngine() {
   const act = async (scriptId, action) => {
     try {
       await fetch(`${API}/agents/content-engine/action`,{
-        method:"POST",headers:{"Content-Type":"application/json"},
+        method:"POST",headers: authHeaders({"Content-Type":"application/json"}),
         body:JSON.stringify({script_id:scriptId,action})
       });
     } catch(e) {}

@@ -6,3 +6,9 @@ __pycache__/
 *.pyo
 .env*
 !.env.example
+
+# Agent tooling. Not used by the FastAPI app or the Vite build.
+.claude/
+.claude-flow/
+.mcp.json
+leadOS/

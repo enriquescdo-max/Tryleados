@@ -75,7 +75,7 @@ class LeadOSConfig:
             supabase_service_key=(
                 os.getenv("SUPABASE_SERVICE_KEY") or
                 os.getenv("SUPABASE_SERVICE_ROLE_KEY") or
-                os.getenv("SUPABASE_ANON_KEY", "")
+                ""
             ),
             sendgrid_api_key=os.getenv("SENDGRID_API_KEY"),
             min_qualify_score=int(os.getenv("MIN_QUALIFY_SCORE", "70")),

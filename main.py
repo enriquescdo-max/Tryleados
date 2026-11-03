@@ -4,10 +4,30 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from core.cors_origins import ALLOWED_ORIGINS
+from core.http_guard import OwnerAuthMiddleware
+
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("LeadOS")
 
 app = FastAPI(title="LeadOS", version="3.2")
+
+# Auth runs inside CORS so a 401 still carries the allowed origin.
+app.add_middleware(OwnerAuthMiddleware)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+try:
+    from routers.auth import router as auth_router
+    app.include_router(auth_router)
+    log.info("auth loaded")
+except Exception as e:
+    log.warning(f"auth failed: {e}")
 
 # ── Routers ──────────────────────────────────────────────────────────────────
 try:
@@ -62,19 +82,6 @@ try:
 
 except Exception as e:
     log.warning(f"Agent system unavailable: {e}")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "https://tryleados.com",
-        "https://www.tryleados.com",
-        "http://localhost:3000",
-        "http://localhost:5173",
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 try:
     from routers.vapi_webhook import router as vapi_webhook_router

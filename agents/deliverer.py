@@ -40,6 +40,10 @@ def next_930am_local(tz_str: str) -> datetime:
 
 async def send_email(to_email: str, to_name: str, subject: str, body: str) -> str | None:
     """Send via SendGrid and return the message ID."""
+    from core.compliance import auto_outreach_enabled
+    if not auto_outreach_enabled():
+        print("[Deliverer] Automatic outreach is off. Not sending.")
+        return None
     message = Mail(
         from_email=(FROM_EMAIL, FROM_NAME),
         to_emails=(to_email, to_name),
@@ -60,6 +64,10 @@ async def send_email(to_email: str, to_name: str, subject: str, body: str) -> st
         return None
 
 async def run_deliverer():
+    from core.compliance import auto_outreach_enabled
+    if not auto_outreach_enabled():
+        print("[Deliverer] Automatic outreach is off. Nothing was sent.")
+        return
     conn = await asyncpg.connect(DB_URL)
     try:
         now_utc = datetime.now(timezone.utc)

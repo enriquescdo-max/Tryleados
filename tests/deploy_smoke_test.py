@@ -23,6 +23,13 @@ os.environ.setdefault("SUPABASE_URL", "https://example.supabase.co")
 os.environ.setdefault("SUPABASE_SERVICE_KEY", "dummy")
 os.environ.setdefault("SUPABASE_KEY", "dummy")
 os.environ.setdefault("ANTHROPIC_API_KEY", "dummy")
+os.environ.setdefault("LEADOS_OWNER_EMAIL", "owner@example.com")
+os.environ.setdefault("LEADOS_SESSION_SECRET", "deploy-smoke-session-secret")
+os.environ.setdefault("VAPI_WEBHOOK_SECRET", "deploy-smoke-vapi-secret")
+
+from core.owner_auth import hash_password
+
+os.environ.setdefault("LEADOS_OWNER_PASSWORD_HASH", hash_password("correct-horse-battery"))
 
 PASS = "\033[0;32m✓\033[0m"
 FAIL = "\033[0;31m✗\033[0m"
@@ -112,10 +119,18 @@ def test_core_endpoints(main_module):
     check("GET / -> 200", r.status_code == 200, str(r.status_code))
 
     r = c.get("/api/leads")
-    check("GET /api/leads -> 200 (not 404)", r.status_code == 200, str(r.status_code))
+    check("GET /api/leads without a token is 401", r.status_code == 401, str(r.status_code))
 
-    r = c.get("/api/leads/stats")
-    check("GET /api/leads/stats -> 200 (not 404)", r.status_code == 200, str(r.status_code))
+    login = c.post("/api/auth/login", json={"email": "owner@example.com", "password": "correct-horse-battery"})
+    check("owner login -> 200", login.status_code == 200, login.text[:200])
+    token = login.json().get("token", "")
+    auth = {"Authorization": f"Bearer {token}"}
+
+    r = c.get("/api/leads", headers=auth)
+    check("GET /api/leads as owner -> 200 (not 404)", r.status_code == 200, str(r.status_code))
+
+    r = c.get("/api/leads/stats", headers=auth)
+    check("GET /api/leads/stats as owner -> 200 (not 404)", r.status_code == 200, str(r.status_code))
 
 
 # ── CORS must allow the real production frontend and reject unknown ones ────

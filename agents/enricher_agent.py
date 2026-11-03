@@ -321,6 +321,9 @@ class OutreachAgent(BaseAgent):
 
     async def execute(self, task: AgentTask) -> Dict[str, Any]:
         lead_id = task.payload.get("lead_id")
+        from core.compliance import auto_outreach_enabled
+        if not auto_outreach_enabled():
+            return {"lead_id": lead_id, "sent": False, "reason": "auto_outreach_disabled"}
         lead = self.get_lead(lead_id)
 
         if not lead:

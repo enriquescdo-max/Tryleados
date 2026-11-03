@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast, { Toaster } from "react-hot-toast";
+import { apiFetch } from "../api";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
@@ -236,7 +237,7 @@ export default function Dashboard() {
     try {
       const url = new URL(`${API}/api/leads`);
       if (statusFilter !== "all") url.searchParams.set("status", statusFilter);
-      const res = await fetch(url);
+      const res = await apiFetch(url);
       const data = await res.json();
       if (data.leads !== undefined) {
         setLeads(data.leads);
@@ -255,7 +256,7 @@ export default function Dashboard() {
 
   const fetchStats = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/api/leads/stats`);
+      const res = await apiFetch(`${API}/api/leads/stats`);
       if (!res.ok) return;
       setStats(await res.json());
     } catch {
@@ -270,32 +271,14 @@ export default function Dashboard() {
 
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
-  async function handleVapiCall(lead) {
-    try {
-      const res = await fetch(`${API_URL}/api/v1/outreach/call/start`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lead }),
-      });
-      const data = await res.json();
-      if (data.status === "calling") {
-        toast.success(`📞 Aria is calling ${lead.raw_name || "lead"}! Transfer incoming when qualified.`, { duration: 6000 });
-      } else if (data.status === "blocked") {
-        toast.error(`🚫 ${data.message} Next window: ${data.next_window || "Mon-Fri 8am-5pm CT"}`, { duration: 8000 });
-      } else if (data.status === "skipped") {
-        toast.error(`No phone number for this lead`);
-      } else {
-        toast.error(data.error || "Call failed");
-      }
-    } catch (e) {
-      toast.error("Vapi not configured — add VAPI_API_KEY to Railway");
-    }
+  async function handleVapiCall() {
+    toast.error("AI outbound calls are off. Callbacks are placed by you, and only when consent is on file.");
   }
 
   async function handleVideo(lead) {
     try {
       toast.success("🎬 Generating personalized video...", { duration: 3000 });
-      const res = await fetch(`${API_URL}/api/v1/outreach/video/generate`, {
+      const res = await apiFetch(`${API_URL}/api/v1/outreach/video/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ lead }),
@@ -311,31 +294,15 @@ export default function Dashboard() {
     }
   }
 
-  async function handleSequence(lead) {
-    try {
-      const res = await fetch(`${API_URL}/api/v1/outreach/sequence/enroll`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lead, hypothesis_id: "H001" }),
-      });
-      const data = await res.json();
-      if (data.status === "enrolled") {
-        toast.success(`✉️ ${lead.raw_name || "Lead"} enrolled in email sequence!`);
-      } else if (data.status === "skipped") {
-        toast.error("No email address for this lead");
-      } else {
-        toast.error(data.error || "Enrollment failed");
-      }
-    } catch (e) {
-      toast.error("Instantly not configured — add INSTANTLY_API_KEY to Railway");
-    }
+  async function handleSequence() {
+    toast.error("Automatic email enrollment is off. Approve a draft before anything is sent.");
   }
 
   async function handleScrape() {
     setScraping(true);
     toast.success("Scrape started! Leads will appear in ~2 minutes.", { duration: 5000 });
     try {
-      await fetch(`${API}/api/leads/run-scrape`, { method: "POST" });
+      await apiFetch(`${API}/api/leads/run-scrape`, { method: "POST" });
     } catch (e) {
       console.log("Scrape request error:", e);
     }
@@ -351,7 +318,7 @@ export default function Dashboard() {
 
   async function handleStatusChange(leadId, newStatus) {
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `${API}/api/leads/${leadId}/status?status=${newStatus}`,
         { method: "PATCH" }
       );

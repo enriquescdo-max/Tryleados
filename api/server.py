@@ -38,7 +38,16 @@ async def start_api_server(orchestrator, host="0.0.0.0", port=8000):
         await asyncio.sleep(99999)
         return
     app = FastAPI(title="LeadOS API", version="2.1.0")
-    app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+    from core.cors_origins import ALLOWED_ORIGINS
+    from core.http_guard import OwnerAuthMiddleware
+    app.add_middleware(OwnerAuthMiddleware)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=ALLOWED_ORIGINS,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
     _register_routes(app, orchestrator)
     cfg = uvicorn.Config(app=app, host=host, port=port, log_level="warning")
     server = uvicorn.Server(cfg)
@@ -49,9 +58,7 @@ def _register_routes(app, orchestrator):
     from fastapi import HTTPException, BackgroundTasks, Depends, Header, Request
     from pydantic import BaseModel
 
-    # ── In-memory stores ──────────────────────────────────────────────────
-    _sessions: Dict[str, Dict] = {}
-
+    # ── In-memory stores (campaign drafts only — not users) ───────────────
     _sequences: List[Dict] = [
         {"id": "seq_001", "name": "Realtor Referral Partnership",
          "contacts": 0, "active": False, "steps": 4, "open_rate": 0, "reply_rate": 0,
@@ -120,69 +127,33 @@ def _register_routes(app, orchestrator):
         email: str
         password: str
 
-    # ── Auth helpers ──────────────────────────────────────────────────────
-
-    ADMIN_EMAIL    = os.getenv("LEADOS_ADMIN_EMAIL", "admin@leadOS.ai")
-    ADMIN_PASSWORD = os.getenv("LEADOS_ADMIN_PASSWORD", "LeadOS2024!")
-
-    def _hash(pw: str) -> str:
-        return hashlib.sha256(pw.encode()).hexdigest()
-
-    _users = {
-        ADMIN_EMAIL: {
-            "id": "user_001", "email": ADMIN_EMAIL, "name": "LeadOS Admin",
-            "role": "admin", "password_hash": _hash(ADMIN_PASSWORD),
-            "created_at": datetime.utcnow().isoformat(),
-        }
-    }
-
-    def _create_session(user: Dict) -> str:
-        token = secrets.token_urlsafe(32)
-        _sessions[token] = {
-            "user_id": user["id"], "email": user["email"], "role": user["role"],
-            "created_at": time.time(), "expires_at": time.time() + 86400 * 7,
-        }
-        return token
-
-    def _get_session(authorization: Optional[str] = Header(None)) -> Optional[Dict]:
-        if not authorization:
-            return None
-        token = authorization.replace("Bearer ", "").strip()
-        sess = _sessions.get(token)
-        if not sess or time.time() > sess["expires_at"]:
-            _sessions.pop(token, None)
-            return None
-        return sess
-
-    def _require_auth(authorization: Optional[str] = Header(None)) -> Dict:
-        sess = _get_session(authorization)
-        if not sess:
-            raise HTTPException(status_code=401, detail="Not authenticated. Please log in.")
-        return sess
-
-    # ══════════════════════════════════════════════════════════════════════
-    # AUTH
-    # ══════════════════════════════════════════════════════════════════════
+    # ── Auth: signed owner token, no in-memory user table ────────────────
 
     @app.post("/auth/login")
     async def login(req: LoginRequest):
-        user = _users.get(req.email)
-        if not user or user["password_hash"] != _hash(req.password):
-            raise HTTPException(status_code=401, detail="Invalid email or password")
-        token = _create_session(user)
-        safe_user = {k: v for k, v in user.items() if k != "password_hash"}
-        return {"token": token, "user": safe_user, "expires_in": 86400 * 7}
+        from core.owner_auth import authenticate, auth_configured, issue_token
+        if not auth_configured():
+            raise HTTPException(status_code=503, detail="Owner login is not configured.")
+        if not authenticate(req.email, req.password):
+            raise HTTPException(status_code=401, detail="Invalid email or password.")
+        token = issue_token(req.email)
+        return {
+            "token": token,
+            "user": {"email": req.email.strip().lower(), "role": "owner"},
+            "expires_in": 12 * 3600,
+        }
 
     @app.post("/auth/logout")
     async def logout(authorization: Optional[str] = Header(None)):
-        if authorization:
-            _sessions.pop(authorization.replace("Bearer ", "").strip(), None)
         return {"status": "logged_out"}
 
     @app.get("/auth/me")
-    async def get_me(sess: Dict = Depends(_require_auth)):
-        user = _users.get(sess["email"], {})
-        return {k: v for k, v in user.items() if k != "password_hash"}
+    async def get_me(authorization: Optional[str] = Header(None)):
+        from core.owner_auth import bearer_token, verify_token
+        payload = verify_token(bearer_token(authorization))
+        if not payload:
+            raise HTTPException(status_code=401, detail="Not authenticated.")
+        return {"email": payload["sub"], "role": "owner"}
 
     # ══════════════════════════════════════════════════════════════════════
     # CORE
@@ -518,17 +489,13 @@ Return ONLY valid JSON with keys "subject" and "body". No markdown, no explanati
         payload  = await request.body()
         sig      = request.headers.get("stripe-signature", "")
 
-        if not STRIPE_SECRET_KEY:
-            return {"status": "skipped_no_key"}
+        if not STRIPE_WEBHOOK_SECRET:
+            raise HTTPException(status_code=401, detail="Stripe webhook secret is not configured.")
 
         try:
             import stripe
             stripe.api_key = STRIPE_SECRET_KEY
-            if STRIPE_WEBHOOK_SECRET:
-                event = stripe.Webhook.construct_event(payload, sig, STRIPE_WEBHOOK_SECRET)
-            else:
-                import json
-                event = json.loads(payload)
+            event = stripe.Webhook.construct_event(payload, sig, STRIPE_WEBHOOK_SECRET)
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"Webhook error: {e}")
 
@@ -878,7 +845,11 @@ Keep responses concise (3-5 sentences max) and action-oriented."""
 
     @app.post("/voice/call")
     async def call_lead(req: CallLeadRequest):
-        """Initiate an outbound Vapi call to a lead."""
+        """Outbound AI calls stay off unless the owner enables them and consent is on file."""
+        from core.compliance import contact_decision
+        decision = contact_decision(channel="ai_call", consents=[])
+        if not decision.allowed:
+            raise HTTPException(status_code=403, detail=decision.reason)
         lead = orchestrator.leads_db.get(req.lead_id)
         if not lead:
             raise HTTPException(status_code=404, detail=f"Lead {req.lead_id} not found")
@@ -919,6 +890,8 @@ Keep responses concise (3-5 sentences max) and action-oriented."""
 
     @app.post("/webhook/vapi/call-started")
     async def vapi_call_started(request: Request):
+        from core.webhook_auth import require_vapi_secret
+        require_vapi_secret(request)
         payload = await request.json()
         call_id = payload.get("callId") or payload.get("id", "")
         lead_id = (payload.get("metadata") or {}).get("lead_id", "")
@@ -927,6 +900,8 @@ Keep responses concise (3-5 sentences max) and action-oriented."""
 
     @app.post("/webhook/vapi/call-ended")
     async def vapi_call_ended(request: Request, background_tasks: BackgroundTasks):
+        from core.webhook_auth import require_vapi_secret
+        require_vapi_secret(request)
         payload = await request.json()
         call   = payload.get("call", payload)
         call_id= call.get("id", "")
@@ -978,6 +953,8 @@ Keep responses concise (3-5 sentences max) and action-oriented."""
 
     @app.post("/webhook/vapi/transfer-requested")
     async def vapi_transfer_requested(request: Request):
+        from core.webhook_auth import require_vapi_secret
+        require_vapi_secret(request)
         payload = await request.json()
         call_id = payload.get("callId", "")
         orchestrator._log_event("voice", f"Warm transfer requested: {call_id}", "success")
