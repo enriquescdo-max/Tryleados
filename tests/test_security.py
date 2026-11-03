@@ -98,6 +98,7 @@ class HttpTests(unittest.TestCase):
         self.assertIn("Bulk send", res.json()["detail"])
 
     def test_vapi_webhook_secret(self):
+        os.environ["VAPI_WEBHOOK_SECRET"] = "unit-test-vapi-secret"
         body = {"message": {"type": "status-update"}}
         missing = self.client.post("/webhook/vapi", json=body)
         self.assertEqual(missing.status_code, 401)

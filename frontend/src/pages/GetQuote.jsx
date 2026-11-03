@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 
-const LEADSCOUT_API =
-  import.meta.env.VITE_LEADSCOUT_URL || "https://leadscout-production-b570.up.railway.app";
+const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const CONSENT_TEXT =
+  "I agree to be contacted by a licensed insurance agent by phone, text, or email about insurance quotes, including via automated technology. Consent is not a condition of purchase. Message and data rates may apply. Reply STOP to opt out.";
 
 const COVERAGE = [
   { id: "home", label: "🏠 Home" },
@@ -80,13 +81,19 @@ export default function GetQuote() {
     setError(null);
     setSubmitting(true);
     try {
-      const res = await fetch(`${LEADSCOUT_API}/api/consumer-leads`, {
+      const res = await fetch(`${API}/api/public/web-lead`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, ...attribution, insurance_types: types, tcpa_consent: consent }),
+        body: JSON.stringify({
+          ...form,
+          ...attribution,
+          insurance_types: types,
+          tcpa_consent: consent,
+          consent_text: CONSENT_TEXT,
+        }),
       });
       const body = await res.json();
-      if (!res.ok) throw new Error(body.error || "Something went wrong");
+      if (!res.ok) throw new Error(body.detail || body.error || "Something went wrong");
       setDone(true);
     } catch (err) {
       setError(err.message);
@@ -157,9 +164,7 @@ export default function GetQuote() {
         <label className="flex items-start gap-3 text-xs text-[#6B6B6B] leading-relaxed cursor-pointer">
           <input type="checkbox" required checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5" />
           <span>
-            I agree to be contacted by a licensed insurance agent by phone, text, or email about
-            insurance quotes, including via automated technology. Consent is not a condition of
-            purchase. Message and data rates may apply.
+            {CONSENT_TEXT}{" "}
           </span>
         </label>
 
